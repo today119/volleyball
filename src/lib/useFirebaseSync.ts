@@ -1,0 +1,142 @@
+/**
+ * Firebase Realtime Database sync hook.
+ *
+ * Implements the same race-condition protection as MatchMaker Pro:
+ *   - `isRemoteUpdate` flag prevents the write effect from echoing
+ *     remote-originated state changes back to the server.
+ *   - `hasInitialized` flag prevents the local snapshot from
+ *     overwriting existing remote data on first connection.
+ *   - 300ms debounce keeps rapid rally recording from spamming RTDB.
+ *
+ * For volleyball recording specifically: every rally fires a state
+ * update. Without debouncing + the remote-update guard, two devices
+ * recording the same court would clobber each other.
+ */
+import { useEffect, useRef } from 'react';
+import { database } from './firebase';
+import type { AppData } from '../types';
+
+interface UseFirebaseSyncOptions {
+  sessionId: string | null;
+  data: AppData;
+  setData: React.Dispatch<React.SetStateAction<AppData>>;
+  readOnly: boolean;
+  enabled: boolean;
+}
+
+export interface SyncStatus {
+  connected: boolean;
+  lastSync: number | null;
+  error: string | null;
+}
+
+/**
+ * Normalize remote data to handle missing/legacy fields.
+ * Firebase may strip empty arrays or have data from older schema.
+ */
+function normalizeData(raw: any): AppData {
+  return {
+    teams: Array.isArray(raw.teams)
+      ? raw.teams.map((t: any) => ({
+          id: t.id ?? `team_${Math.random()}`,
+          name: t.name ?? '팀',
+          players: Array.isArray(t.players) ? t.players : [],
+        }))
+      : [],
+    games: Array.isArray(raw.games)
+      ? raw.games.map((g: any) => ({
+          ...g,
+          sets: Array.isArray(g.sets) ? g.sets : [],
+        }))
+      : [],
+    events: Array.isArray(raw.events)
+      ? raw.events.map((e: any) => ({
+          ...e,
+          teamIds: Array.isArray(e.teamIds) ? e.teamIds : [],
+          matches: Array.isArray(e.matches) ? e.matches : [],
+        }))
+      : [],
+    criteria: raw.criteria ?? {},
+    gasUrl: raw.gasUrl ?? '',
+    peerEvals: raw.peerEvals ?? {},
+  };
+}
+
+export function useFirebaseSync({
+  sessionId,
+  data,
+  setData,
+  readOnly,
+  enabled,
+}: UseFirebaseSyncOptions) {
+  const isRemoteUpdate = useRef(false);
+  const hasInitialized = useRef(false);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Subscribe to remote updates ─────────────────────────────────────
+  useEffect(() => {
+    if (!enabled || !sessionId) return;
+
+    hasInitialized.current = false;
+    const ref = database.ref(`spikelog/${sessionId}`);
+
+    const handler = ref.on('value', (snapshot) => {
+      const remoteData = snapshot.val();
+
+      if (!hasInitialized.current) {
+        // First snapshot for this session
+        if (remoteData) {
+          // Remote has data → pull it down, replacing local
+          const { lastUpdate, ...cleanData } = remoteData;
+          isRemoteUpdate.current = true;
+          setData(normalizeData(cleanData));
+          queueMicrotask(() => {
+            isRemoteUpdate.current = false;
+          });
+        }
+        // If remote is empty, local data will be pushed by the write effect below
+        hasInitialized.current = true;
+        return;
+      }
+
+      if (!remoteData) return;
+
+      // Subsequent remote update (from another device)
+      const { lastUpdate, ...cleanData } = remoteData;
+      isRemoteUpdate.current = true;
+      setData(normalizeData(cleanData));
+      queueMicrotask(() => {
+        isRemoteUpdate.current = false;
+      });
+    });
+
+    return () => {
+      ref.off('value', handler);
+      hasInitialized.current = false;
+    };
+  }, [sessionId, enabled, setData]);
+
+  // ── Write local changes to remote (debounced) ───────────────────────
+  useEffect(() => {
+    if (!enabled || !sessionId || readOnly) return;
+    if (!hasInitialized.current) return; // wait for initial pull
+    if (isRemoteUpdate.current) return;  // don't echo remote updates back
+
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    debounceTimer.current = setTimeout(() => {
+      const ref = database.ref(`spikelog/${sessionId}`);
+      ref
+        .set({ ...data, lastUpdate: Date.now() })
+        .catch((err) => {
+          console.error('[firebase-sync] write failed:', err);
+        });
+    }, 800);
+
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [data, sessionId, enabled, readOnly]);
+}

@@ -1,0 +1,172 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+:root {
+  background-color: #f7f8fc;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #f7f8fc;
+  color: #1e293b;
+  font-size: 17px;
+}
+
+/* 모바일에서 살짝 작게 (가독성 유지하면서 공간 확보) */
+@media (max-width: 640px) {
+  html, body, #root {
+    font-size: 15px;
+  }
+}
+
+/* 입력/버튼 등 form 요소도 일관되게 */
+input, select, textarea, button {
+  font-size: inherit;
+}
+
+/* ════════════════════════════════════════════════════
+   LIGHT THEME OVERRIDE
+   매치매이커 스타일 (밝은 배경 + 미니멀)
+   ════════════════════════════════════════════════════ */
+
+/* 어두운 배경 → 밝은 배경 */
+.bg-slate-950 { background-color: #f7f8fc !important; }
+.bg-slate-900 { background-color: #ffffff !important; }
+.bg-slate-900\/30 { background-color: #ffffff !important; }
+.bg-slate-900\/40 { background-color: #f1f5f9 !important; }
+.bg-slate-800 { background-color: #e2e8f0 !important; }
+.bg-slate-800\/40 { background-color: #f1f5f9 !important; }
+.bg-slate-800\/50 { background-color: #f1f5f9 !important; }
+
+/* 어두운 텍스트 → 밝은 환경에 맞는 텍스트 */
+.text-slate-50 { color: #0f172a !important; }
+.text-slate-100 { color: #0f172a !important; }
+.text-slate-200 { color: #0f172a !important; }
+.text-slate-300 { color: #1e293b !important; }
+.text-slate-400 { color: #475569 !important; }
+.text-slate-500 { color: #64748b !important; }
+.text-slate-600 { color: #94a3b8 !important; }
+.text-slate-700 { color: #94a3b8 !important; }
+.text-slate-800 { color: #cbd5e1 !important; }
+.text-white { color: #0f172a !important; }
+
+/* 카드/컨테이너에 살짝 그림자 */
+.bg-slate-900,
+[class*="rounded-2xl"][class*="bg-slate-900"],
+[class*="rounded-3xl"][class*="bg-slate-900"] {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.04);
+}
+
+/* 테두리 색상 */
+.border-slate-700 { border-color: #cbd5e1 !important; }
+.border-slate-800 { border-color: #e2e8f0 !important; }
+.border-slate-800\/50 { border-color: #e2e8f0 !important; }
+.border-slate-900 { border-color: #e2e8f0 !important; }
+
+/* 입력 필드: 어두운 배경에 흰 텍스트 → 흰 배경에 어두운 텍스트 */
+input.bg-slate-800,
+select.bg-slate-800,
+textarea.bg-slate-800 {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border-color: #cbd5e1 !important;
+}
+input.text-white,
+select.text-white,
+textarea.text-white {
+  color: #1e293b !important;
+}
+
+/* placeholder 색상 */
+input::placeholder, textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* 색상 톤이 너무 진한 액센트는 살짝 부드럽게 */
+.text-orange-500 { color: #ea580c !important; }
+.text-orange-600 { color: #c2410c !important; }
+.text-blue-500 { color: #2563eb !important; }
+.text-blue-600 { color: #1d4ed8 !important; }
+.text-emerald-400 { color: #10b981 !important; }
+.text-emerald-500 { color: #059669 !important; }
+.text-red-400 { color: #dc2626 !important; }
+.text-red-500 { color: #b91c1c !important; }
+
+/* 액센트 배경 (낮은 투명도 유지 — 밝은 환경에 맞춰 조금 진하게) */
+.bg-orange-600\/5 { background-color: rgba(234, 88, 12, 0.05) !important; }
+.bg-orange-600\/10 { background-color: rgba(234, 88, 12, 0.08) !important; }
+.bg-orange-600\/15 { background-color: rgba(234, 88, 12, 0.1) !important; }
+.bg-orange-600\/20 { background-color: rgba(234, 88, 12, 0.12) !important; }
+.bg-blue-600\/5 { background-color: rgba(37, 99, 235, 0.05) !important; }
+.bg-blue-600\/10 { background-color: rgba(37, 99, 235, 0.08) !important; }
+.bg-blue-600\/15 { background-color: rgba(37, 99, 235, 0.1) !important; }
+.bg-blue-600\/20 { background-color: rgba(37, 99, 235, 0.12) !important; }
+.bg-emerald-600\/5 { background-color: rgba(16, 185, 129, 0.05) !important; }
+.bg-emerald-600\/10 { background-color: rgba(16, 185, 129, 0.08) !important; }
+.bg-emerald-600\/15 { background-color: rgba(16, 185, 129, 0.1) !important; }
+.bg-emerald-600\/20 { background-color: rgba(16, 185, 129, 0.12) !important; }
+.bg-emerald-600\/30 { background-color: rgba(16, 185, 129, 0.18) !important; }
+.bg-emerald-600\/40 { background-color: rgba(16, 185, 129, 0.25) !important; }
+.bg-red-600\/20 { background-color: rgba(220, 38, 38, 0.1) !important; }
+.bg-red-600\/30 { background-color: rgba(220, 38, 38, 0.15) !important; }
+.bg-red-600\/40 { background-color: rgba(220, 38, 38, 0.2) !important; }
+
+/* 스크롤바 */
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1 !important;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8 !important;
+}
+
+/* 카드의 검은 배경 → 흰 배경 */
+.bg-black { background-color: #ffffff !important; }
+.bg-black\/40 { background-color: rgba(255, 255, 255, 0.95) !important; }
+.bg-black\/50 { background-color: rgba(15, 23, 42, 0.4) !important; }  /* modal overlay */
+.bg-black\/60 { background-color: rgba(15, 23, 42, 0.5) !important; }
+.bg-black\/70 { background-color: rgba(15, 23, 42, 0.6) !important; }
+.bg-black\/80 { background-color: rgba(15, 23, 42, 0.7) !important; }
+
+/* 그라데이션 배경도 밝게 */
+.from-slate-950 { --tw-gradient-from: #f7f8fc !important; }
+.to-slate-950 { --tw-gradient-to: #f7f8fc !important; }
+.from-slate-900 { --tw-gradient-from: #ffffff !important; }
+.to-slate-900 { --tw-gradient-to: #ffffff !important; }
+
+/* Custom scrollbar for a cleaner look */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* ════════════════════════════════════════════════════
+   SCOREBOARD DARK ZONE
+   스코어보드는 light theme override를 무시하고 dark 유지
+   ════════════════════════════════════════════════════ */
+.scoreboard-dark { background: #0f172a !important; }
+.scoreboard-dark .bg-slate-900 { background-color: #0f172a !important; }
+.scoreboard-dark .bg-slate-950 { background-color: #020617 !important; }
+.scoreboard-dark .text-white { color: #ffffff !important; }
+.scoreboard-dark .text-slate-300 { color: #cbd5e1 !important; }
+.scoreboard-dark .text-slate-400 { color: #94a3b8 !important; }
+.scoreboard-dark .text-slate-500 { color: #64748b !important; }
+.scoreboard-dark .text-slate-600 { color: #475569 !important; }
