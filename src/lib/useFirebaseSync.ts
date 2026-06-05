@@ -62,6 +62,23 @@ function normalizeData(raw: any): AppData {
   };
 }
 
+/** 현재 페이지의 스크롤 가능한 요소 위치 저장/복원 */
+function saveScrollPositions(): Map<Element, number> {
+  const map = new Map<Element, number>();
+  document.querySelectorAll('*').forEach(el => {
+    if ((el as HTMLElement).scrollTop > 0) map.set(el, (el as HTMLElement).scrollTop);
+  });
+  return map;
+}
+
+function restoreScrollPositions(saved: Map<Element, number>) {
+  requestAnimationFrame(() => {
+    saved.forEach((top, el) => {
+      if (document.contains(el)) (el as HTMLElement).scrollTop = top;
+    });
+  });
+}
+
 export function useFirebaseSync({
   sessionId,
   data,
@@ -88,11 +105,13 @@ export function useFirebaseSync({
         if (remoteData) {
           // Remote has data → pull it down, replacing local
           const { lastUpdate, ...cleanData } = remoteData;
+          const scrollPos = saveScrollPositions();
           isRemoteUpdate.current = true;
           setData(normalizeData(cleanData));
           queueMicrotask(() => {
             isRemoteUpdate.current = false;
           });
+          restoreScrollPositions(scrollPos);
         }
         // If remote is empty, local data will be pushed by the write effect below
         hasInitialized.current = true;
@@ -103,11 +122,13 @@ export function useFirebaseSync({
 
       // Subsequent remote update (from another device)
       const { lastUpdate, ...cleanData } = remoteData;
+      const scrollPos = saveScrollPositions();
       isRemoteUpdate.current = true;
       setData(normalizeData(cleanData));
       queueMicrotask(() => {
         isRemoteUpdate.current = false;
       });
+      restoreScrollPositions(scrollPos);
     });
 
     return () => {
