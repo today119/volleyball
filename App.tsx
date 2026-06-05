@@ -1635,6 +1635,20 @@ export default function App() {
       navigate('home');
     };
 
+    const scrollRef = useRef<HTMLElement>(null);
+    const scrollPos = useRef(0);
+
+    // 리렌더링 시 스크롤 위치 보존
+    useEffect(() => {
+      const el = scrollRef.current;
+      if (!el) return;
+      el.scrollTop = scrollPos.current;
+    });
+
+    const onScroll = () => {
+      if (scrollRef.current) scrollPos.current = scrollRef.current.scrollTop;
+    };
+
     return (
       <div className="flex flex-col h-full bg-slate-950 text-slate-50">
         <header className="p-6 flex items-center justify-between gap-4 border-b border-slate-900">
@@ -1651,7 +1665,7 @@ export default function App() {
           </Button>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6 pb-12 min-h-0">
+        <main ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto p-6 pb-12 min-h-0">
           <div className="max-w-4xl mx-auto space-y-6 pb-6">
           <Card title="선수 추가">
             <div className="grid grid-cols-3 gap-3 mb-3">
