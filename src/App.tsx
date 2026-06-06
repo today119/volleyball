@@ -1293,7 +1293,7 @@ export default function App() {
         <div className="max-w-4xl mx-auto space-y-8 pb-6">
         <section className="space-y-4">
           <div className="flex justify-between items-end">
-            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+            <h2 className="text-base lg:text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <Users size={16} /> 팀 관리
             </h2>
             <Button variant="ghost" size="sm" onClick={() => {
@@ -1308,7 +1308,7 @@ export default function App() {
             }} icon={Plus}>팀 추가</Button>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 lg:gap-3">
             {data.teams.map((team, idx) => {
               const colors = [
                 { bar: '#ea580c', text: '#c2410c' },   // orange
@@ -1329,15 +1329,15 @@ export default function App() {
                 >
                   <button
                     onClick={() => navigate('team', { teamId: team.id })}
-                    className="w-full text-left p-4"
+                    className="w-full text-left p-5 lg:p-4"
                   >
-                    <h3 
-                      className="font-black text-base truncate mb-1.5"
+                    <h3
+                      className="font-black text-lg lg:text-base truncate mb-1.5"
                       style={{ color: c.text }}
                     >
                       {team.name}
                     </h3>
-                    <p className="text-xs text-slate-500 font-bold">
+                    <p className="text-sm lg:text-xs text-slate-500 font-bold">
                       선수 <span className="text-slate-700 font-mono">{(team.players?.length ?? 0)}명</span>
                     </p>
                   </button>
@@ -1371,7 +1371,7 @@ export default function App() {
         {/* 대회 섹션 */}
         <section className="space-y-4">
           <div className="flex justify-between items-end">
-            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+            <h2 className="text-base lg:text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <Trophy size={16} /> 대회 (리그)
             </h2>
             <Button 
@@ -1387,8 +1387,8 @@ export default function App() {
 
           {data.events.length === 0 ? (
             <div className="text-center py-8 bg-slate-900/30 rounded-xl lg:rounded-3xl border border-dashed border-slate-800">
-              <p className="text-slate-500 text-sm">대회를 만들어 리그를 운영하세요.</p>
-              <p className="text-slate-600 text-xs mt-1">팀 선택 → 라운드 수 입력 → 자동 일정 생성</p>
+              <p className="text-slate-500 text-base lg:text-sm">대회를 만들어 리그를 운영하세요.</p>
+              <p className="text-slate-600 text-sm lg:text-xs mt-1">팀 선택 → 라운드 수 입력 → 자동 일정 생성</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -1405,16 +1405,16 @@ export default function App() {
                       navigate('event-detail');
                     }}
                   >
-                    <div className="p-4">
+                    <div className="p-5 lg:p-4">
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-black text-base text-slate-900 truncate">{event.name}</h3>
-                        <div className="text-xs lg:text-[10px] text-slate-500 mt-0.5">
+                        <h3 className="font-black text-lg lg:text-base text-slate-900 truncate">{event.name}</h3>
+                        <div className="text-sm lg:text-[10px] text-slate-500 mt-0.5">
                           {event.teamIds.length}팀 · {event.rounds}라운드 · 총 {event.matches.length}경기
                         </div>
                       </div>
                       {isOngoing && (
-                        <div className="text-[10px] font-black bg-orange-100 text-orange-700 px-2 py-1 rounded">
+                        <div className="text-xs lg:text-[10px] font-black bg-orange-100 text-orange-700 px-2 py-1 rounded">
                           진행중
                         </div>
                       )}
@@ -1428,7 +1428,7 @@ export default function App() {
                         }}
                       />
                     </div>
-                    <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                    <div className="flex justify-between text-xs lg:text-[10px] text-slate-500 font-mono">
                       <span>완료 {progress.finished}/{progress.total}</span>
                       {progress.inProgress > 0 && (
                         <span className="text-emerald-600">진행 {progress.inProgress}</span>
@@ -1449,7 +1449,7 @@ export default function App() {
             <>
               {ongoing.length > 0 && (
                 <section className="space-y-4">
-                  <h2 className="text-sm font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                  <h2 className="text-base lg:text-sm font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
                     <Play size={16} /> 진행 중인 경기 ({ongoing.length})
                   </h2>
                   <div className="space-y-3">
@@ -1460,7 +1460,7 @@ export default function App() {
                       return (
                         <Card 
                           key={game.id} 
-                          className="rounded-xl lg:rounded-2xl cursor-pointer hover:bg-slate-900 transition-colors border-emerald-600/30 bg-emerald-600/5"
+                          className="p-5 lg:p-4 rounded-xl lg:rounded-2xl cursor-pointer hover:bg-slate-900 transition-colors border-emerald-600/30 bg-emerald-600/5"
                           onClick={() => {
                             setCurrentGameId(game.id);
                             // jump back into recording at last set
@@ -1468,7 +1468,7 @@ export default function App() {
                           }}
                         >
                           <div className="flex justify-between items-center mb-2">
-                            <div className="text-[10px] font-bold text-emerald-400">
+                            <div className="text-xs lg:text-[10px] font-bold text-emerald-400">
                               <span className="inline-block w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1 animate-pulse"></span>
                               LIVE · {game.date} · SET {game.sets.length}
                             </div>
@@ -1489,16 +1489,16 @@ export default function App() {
                           </div>
                           <div className="flex items-center justify-between">
                             <div className="flex-1 text-right">
-                              <div className="font-bold text-slate-200">{teamA?.name}</div>
+                              <div className="font-bold text-lg lg:text-base text-slate-200">{teamA?.name}</div>
                               <div className="text-2xl font-black text-orange-500 font-mono">{lastSet?.scoreA ?? 0}</div>
                             </div>
                             <div className="px-4 font-black text-slate-600 text-sm italic">:</div>
                             <div className="flex-1 text-left">
-                              <div className="font-bold text-slate-200">{teamB?.name}</div>
+                              <div className="font-bold text-lg lg:text-base text-slate-200">{teamB?.name}</div>
                               <div className="text-2xl font-black text-blue-500 font-mono">{lastSet?.scoreB ?? 0}</div>
                             </div>
                           </div>
-                          <div className="text-[10px] text-emerald-400 mt-2 text-center font-bold">탭하여 이어서 진행</div>
+                          <div className="text-xs lg:text-[10px] text-emerald-400 mt-2 text-center font-bold">탭하여 이어서 진행</div>
                         </Card>
                       );
                     })}
@@ -1507,12 +1507,12 @@ export default function App() {
               )}
 
               <section className="space-y-4">
-                <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <h2 className="text-base lg:text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                   <History size={16} /> 종료된 경기
                 </h2>
                 {finished.length === 0 ? (
                   <div className="text-center py-8 lg:py-12 bg-slate-900/30 rounded-xl lg:rounded-3xl border border-dashed border-slate-800">
-                    <p className="text-slate-500 text-sm">종료된 경기가 없습니다.</p>
+                    <p className="text-slate-500 text-base lg:text-sm">종료된 경기가 없습니다.</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -1520,12 +1520,12 @@ export default function App() {
                       const teamA = data.teams.find(t => t.id === game.teamAId);
                       const teamB = data.teams.find(t => t.id === game.teamBId);
                       return (
-                        <Card key={game.id} className="rounded-xl lg:rounded-2xl cursor-pointer hover:bg-slate-900 transition-colors" onClick={() => {
+                        <Card key={game.id} className="p-5 lg:p-4 rounded-xl lg:rounded-2xl cursor-pointer hover:bg-slate-900 transition-colors" onClick={() => {
                           setCurrentGameId(game.id);
                           navigate('dashboard', { gameId: game.id });
                         }}>
                           <div className="flex justify-between items-center">
-                            <div className="text-xs lg:text-[10px] font-bold text-slate-500 mb-1">{game.date}</div>
+                            <div className="text-sm lg:text-[10px] font-bold text-slate-500 mb-1">{game.date}</div>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
