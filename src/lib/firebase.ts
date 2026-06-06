@@ -4,6 +4,7 @@
  */
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/database';
+import 'firebase/compat/auth';
 
 const firebaseConfig = {
   apiKey: "AIzaSyD_1zz4i18oHdaLis82jqn3GdTbdJ1BD7k",
@@ -21,4 +22,5 @@ if (!firebase.apps.length) {
 }
 
 export const database = firebase.database();
+export const auth = firebase.auth();
 export default firebase;

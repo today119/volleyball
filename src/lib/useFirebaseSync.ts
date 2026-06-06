@@ -111,9 +111,11 @@ export function useFirebaseSync({
       const remoteData = snapshot.val();
 
       if (!hasInitialized.current) {
-        // First snapshot for this session
-        if (remoteData) {
-          // Remote has data → pull it down, replacing local
+        // First snapshot for this session — lastUpdate 최신 우선 머지.
+        const remoteTs = (remoteData && remoteData.lastUpdate) || 0;
+        const localTs = Number(localStorage.getItem('spike_log_v1_ts') || 0);
+        if (remoteData && remoteTs >= localTs) {
+          // 원격이 더 최신(또는 동급) → 원격으로 교체
           const { lastUpdate, ...cleanData } = remoteData;
           const scrollPos = saveScrollPositions();
           isRemoteUpdate.current = true;
@@ -123,7 +125,7 @@ export function useFirebaseSync({
           });
           restoreScrollPositions(scrollPos);
         }
-        // If remote is empty, local data will be pushed by the write effect below
+        // 원격이 비었거나 로컬이 더 최신이면 → 아래 write effect가 로컬을 push
         hasInitialized.current = true;
         return;
       }
