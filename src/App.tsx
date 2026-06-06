@@ -1118,7 +1118,22 @@ export default function App() {
         ...INITIAL_DATA,
         ...parsed,
         events: parsed.events ?? [],
-        games: parsed.games ?? [],
+        // 각 세트에 필수 필드 보강 — 옛/외부 주입 데이터에 playerStats·scoreEvents가
+        // 없으면 통계 집계 시 앱 전체가 흰 화면으로 죽던 문제 방지.
+        games: Array.isArray(parsed.games)
+          ? parsed.games.map((g: any) => ({
+              ...g,
+              sets: Array.isArray(g.sets)
+                ? g.sets.map((s: any) => ({
+                    ...s,
+                    playerStats: s.playerStats ?? {},
+                    scoreEvents: Array.isArray(s.scoreEvents) ? s.scoreEvents : [],
+                    courtA: Array.isArray(s.courtA) ? s.courtA : [],
+                    courtB: Array.isArray(s.courtB) ? s.courtB : [],
+                  }))
+                : [],
+            }))
+          : [],
         teams: Array.isArray(parsed.teams)
           ? parsed.teams.map((t: any) => ({
               id: t.id ?? generateId(),
@@ -2254,7 +2269,7 @@ export default function App() {
     // Build cumulative score tower data (each scoring event lights a number box)
     // Tower 1: 1-10, Tower 2: 11-20, Tower 3: 21-30
     const buildScoreSequence = (team: 'A' | 'B'): number[] => {
-      return set.scoreEvents
+      return (set.scoreEvents ?? [])
         .filter(e => e.team === team)
         .map((_, i) => i + 1); // points 1, 2, 3, ...
     };
@@ -2316,7 +2331,7 @@ export default function App() {
               courtIds={set.courtA}
               serverIdx={set.serverIdxA}
               isServing={set.servingTeam === 'A'}
-              stats={set.playerStats}
+              stats={set.playerStats ?? {}}
               onTap={(pid) => handlePlayerTap('A', pid)}
               onBenchTap={(pid) => setPendingSub({ benchId: pid, team: 'A' })}
               disabled={readOnly}
@@ -2327,7 +2342,7 @@ export default function App() {
               {/* Score tower — 늘어남 */}
               <div className="bg-white rounded-2xl border border-slate-200 p-4 flex-1 flex items-center justify-center shadow-sm">
                 <ScoreTowerVertical 
-                  scoreEvents={set.scoreEvents}
+                  scoreEvents={set.scoreEvents ?? []}
                   teamA={teamA}
                   teamB={teamB}
                 />
@@ -2369,6 +2384,14 @@ export default function App() {
                     </button>
                   </div>
                   <div className="text-[10px] text-slate-500 text-center font-bold uppercase tracking-widest">로테이션</div>
+                  <button
+                    onClick={() => navigate('game-court', { setId })}
+                    className="w-full flex items-center justify-center gap-2 py-3 mt-1 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-base transition-colors"
+                    title="코트 선수·서브 오더 다시 편성"
+                  >
+                    <Settings size={18} />
+                    코트 재편성
+                  </button>
                 </div>
               )}
             </div>
@@ -2381,7 +2404,7 @@ export default function App() {
               courtIds={set.courtB}
               serverIdx={set.serverIdxB}
               isServing={set.servingTeam === 'B'}
-              stats={set.playerStats}
+              stats={set.playerStats ?? {}}
               onTap={(pid) => handlePlayerTap('B', pid)}
               onBenchTap={(pid) => setPendingSub({ benchId: pid, team: 'B' })}
               disabled={readOnly}
