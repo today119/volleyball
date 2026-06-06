@@ -4,8 +4,12 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { 
-  Trophy, 
+import {
+  Trophy,
+  Volleyball,
+  LogIn,
+  LogOut,
+  UserRound,
   Users, 
   Settings, 
   Plus, 
@@ -1184,6 +1188,13 @@ export default function App() {
   // collab 동기화 setData 때마다 리마운트되는데, 로컬 useState면 탭이
   // 순위표로 초기화되어 '경기 일정'을 눌러도 튕기는 버그가 있었음.)
   const [eventDetailTab, setEventDetailTab] = useState<'standings' | 'matches'>('standings');
+  // 경기 설정 폼 상태도 App 레벨로 — 중첩 뷰가 collab 리렌더로 리마운트되면
+  // 로컬 useState가 초기화돼 "9인제/3전2선승 선택이 6인제/단판으로 되돌아가던" 버그 방지.
+  const [gsTeamA, setGsTeamA] = useState('');
+  const [gsTeamB, setGsTeamB] = useState('');
+  const [gsTarget, setGsTarget] = useState(25);
+  const [gsCourtN, setGsCourtN] = useState(6);
+  const [gsMaxSets, setGsMaxSets] = useState(1); // 1=단판, 3=3전2선승, 5=5전3선승
   // Derive currentGame from data.games (single source of truth)
   const currentGame: Game | null = currentGameId 
     ? data.games.find(g => g.id === currentGameId) ?? null 
@@ -1242,26 +1253,39 @@ export default function App() {
     <div className="flex flex-col h-full bg-slate-950 text-slate-50">
       <header className="p-6 flex justify-between items-center border-b border-slate-900">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-600/20">
-            <Trophy size={24} className="text-white" />
+          <div className="w-10 h-10 bg-sky-500 rounded-xl flex items-center justify-center shadow-lg shadow-sky-500/30">
+            <Volleyball size={24} className="text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-black tracking-tight">SPIKELOG <span className="text-orange-600">PRO</span></h1>
+            <h1 className="text-xl font-black tracking-tight text-white">Spike <span className="text-sky-400">Log</span> Pro</h1>
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Volleyball Performance Tracker</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* 로그인/로그아웃 — '협업중' 배지와 같은 연한 pill 톤으로 통일 */}
           {canRecord ? (
             <>
-              <span className="text-[11px] text-emerald-400 font-bold max-w-[140px] truncate" title={authUser?.email ?? ''}>
-                ● {authUser?.name || authUser?.email}
+              <span
+                className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-600/10 border border-emerald-600/30 text-[11px] font-bold text-emerald-400 max-w-[150px] truncate"
+                title={authUser?.email ?? ''}
+              >
+                <UserRound size={11} className="flex-shrink-0" />
+                <span className="truncate">{authUser?.name || authUser?.email}</span>
               </span>
-              <Button variant="ghost" size="sm" onClick={handleLogout}>로그아웃</Button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1 px-2 py-1 rounded-md bg-slate-700/40 border border-slate-600/50 hover:bg-slate-700/70 text-[11px] font-bold text-slate-300 transition-colors"
+              >
+                <LogOut size={11} /> 로그아웃
+              </button>
             </>
           ) : (
-            <Button variant="success" size="sm" onClick={handleLogin}>
-              {authUser ? '다른 계정' : '구글 로그인'}
-            </Button>
+            <button
+              onClick={handleLogin}
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-sky-600/10 border border-sky-600/30 hover:bg-sky-600/20 text-[11px] font-bold text-sky-400 transition-colors"
+            >
+              <LogIn size={11} /> {authUser ? '다른 계정' : '구글 로그인'}
+            </button>
           )}
           <SessionBadge session={session} onShare={copyShareLink} />
           <Button variant="ghost" size="sm" onClick={() => navigate('settings')} icon={Settings} />
@@ -1914,11 +1938,14 @@ export default function App() {
   };
 
   const GameSetupView = () => {
-    const [tA, setTA] = useState(data.teams[0]?.id || '');
-    const [tB, setTB] = useState(data.teams[1]?.id || '');
-    const [target, setTarget] = useState(25);
-    const [courtN, setCourtN] = useState(6);
-    const [maxSets, setMaxSets] = useState(1);  // 1 = 단판, 3 = 3전2선승, 5 = 5전3선승
+    // App 레벨 상태 사용(리마운트돼도 선택 유지). 팀은 미선택 시 기본값으로 폴백.
+    const tA = gsTeamA || data.teams[0]?.id || '';
+    const setTA = setGsTeamA;
+    const tB = gsTeamB || data.teams[1]?.id || '';
+    const setTB = setGsTeamB;
+    const target = gsTarget, setTarget = setGsTarget;
+    const courtN = gsCourtN, setCourtN = setGsCourtN;
+    const maxSets = gsMaxSets, setMaxSets = setGsMaxSets;
 
     const start = () => {
       if (tA === tB) {
@@ -2183,6 +2210,15 @@ export default function App() {
     );
     const pickMobileTeam = (t: 'A' | 'B') => { setMobileTeam(t); localStorage.setItem('spike_mobile_team', t); };
 
+    // 경기 설정 수정 모달 (인원수·세트수·목표점수)
+    const [showSettings, setShowSettings] = useState(false);
+    const applyGameSettings = (patch: Partial<Pick<Game, 'courtN' | 'maxSets' | 'setTarget'>>) => {
+      setData(prev => ({
+        ...prev,
+        games: prev.games.map(g => g.id === game.id ? { ...g, ...patch } : g),
+      }));
+    };
+
     // Role-based filtering: students see only their assigned action buttons.
     // Teacher sees everything.
     const role: EvaluatorRole = (new URLSearchParams(window.location.search).get('role') as EvaluatorRole) || 'teacher';
@@ -2353,30 +2389,24 @@ export default function App() {
           </div>
         </header>
 
-        {/* Main wide layout: 상단 스코어보드 + 하단 3열 */}
-        <main className="flex-1 flex flex-col overflow-hidden overflow-y-auto p-4 gap-4">
-          {/* 상단: 가로형 스코어보드 (풀너비) */}
-          <ScoreboardCard
-            game={game}
-            currentSet={set}
-            teamA={teamA}
-            teamB={teamB}
-          />
+        {/* 스코어보드 — 헤더 아래 고정(스크롤돼도 항상 보임) */}
+        <div className="shrink-0 px-4 pt-4">
+          <ScoreboardCard game={game} currentSet={set} teamA={teamA} teamB={teamB} />
+        </div>
 
-          {/* 하단: 데스크톱 3열(양팀) / 모바일 1열(선택 팀 + 토글) */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px_1fr] gap-4">
-            {/* 모바일 전용 팀 토글 (lg 미만에서만) */}
-            <div className="order-1 lg:hidden">
+        {/* 본문: 데스크톱 3열 / 모바일 1열. 명단은 컬럼 내부 스크롤 → 스코어보드·하단바 항상 보임 */}
+        <main className="flex-1 overflow-hidden p-4 pt-3">
+          <div className="flex flex-col lg:flex-row gap-4 h-full">
+            {/* 모바일 팀 토글 */}
+            <div className="lg:hidden shrink-0">
               <div className="grid grid-cols-2 gap-2 bg-white rounded-2xl border border-slate-200 p-1.5 shadow-sm">
-                {([['A', teamA?.name] , ['B', teamB?.name]] as Array<['A' | 'B', string | undefined]>).map(([t, name]) => (
+                {([['A', teamA?.name], ['B', teamB?.name]] as Array<['A' | 'B', string | undefined]>).map(([t, name]) => (
                   <button
                     key={t}
                     onClick={() => pickMobileTeam(t)}
                     className={cn(
                       'py-2.5 rounded-xl font-black text-sm transition-all',
-                      mobileTeam === t
-                        ? (t === 'A' ? 'bg-orange-600 text-white' : 'bg-blue-600 text-white')
-                        : 'bg-slate-100 text-slate-500'
+                      mobileTeam === t ? (t === 'A' ? 'bg-orange-600 text-white' : 'bg-blue-600 text-white') : 'bg-slate-100 text-slate-500'
                     )}
                   >
                     {name || (t === 'A' ? '홈' : '어웨이')}
@@ -2385,8 +2415,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* Team A — 코트 + 대기 통합 (모바일: 선택 시만) */}
-            <div className={cn('order-2 lg:order-none', mobileTeam === 'A' ? 'block' : 'hidden', 'lg:block')}>
+            {/* Team A (컬럼 내부 스크롤) */}
+            <div className={cn('min-h-0 overflow-y-auto lg:flex-1 lg:block', mobileTeam === 'A' ? 'flex-1' : 'hidden')}>
               <CourtPlayers
                 team="A"
                 teamName={teamA?.name ?? ''}
@@ -2401,67 +2431,15 @@ export default function App() {
               />
             </div>
 
-            {/* Center — 타워 + 컨트롤 (모바일에선 타워 숨김) */}
-            <div className="order-3 lg:order-none flex flex-col gap-3 self-stretch">
-              {/* Score tower — 데스크톱만 */}
-              <div className="hidden lg:flex bg-white rounded-2xl border border-slate-200 p-4 flex-1 items-center justify-center shadow-sm">
-                <ScoreTowerVertical
-                  scoreEvents={set.scoreEvents ?? []}
-                  teamA={teamA}
-                  teamB={teamB}
-                />
+            {/* Center 득점 타워 — 데스크톱만, 항상 보임 */}
+            <div className="hidden lg:flex lg:w-[300px] shrink-0 flex-col min-h-0">
+              <div className="bg-white rounded-2xl border border-slate-200 p-3 flex-1 overflow-y-auto flex items-start justify-center shadow-sm">
+                <ScoreTowerVertical scoreEvents={set.scoreEvents ?? []} teamA={teamA} teamB={teamB} />
               </div>
-
-              {/* Quick controls — 하단 고정 */}
-              {!readOnly && role === 'teacher' && (
-                <div className="flex flex-col gap-2 w-full flex-shrink-0">
-                  {maxSets > 1 && (
-                    <button
-                      onClick={endCurrentSet}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-base transition-colors shadow-md"
-                    >
-                      <CheckCircle2 size={18} />
-                      {matchDecided ? '세트 종료 · 경기 결과 →' : '세트 종료 · 다음 세트 →'}
-                    </button>
-                  )}
-                  <button
-                    onClick={undoLastScore}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white border-2 border-orange-300 hover:bg-orange-50 text-orange-700 font-bold text-base transition-colors"
-                  >
-                    <RotateCcw size={18} />
-                    득점 취소
-                  </button>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => rotateServer(set.servingTeam, -1)}
-                      className="flex items-center justify-center gap-1 py-3 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-base transition-colors"
-                    >
-                      <ChevronLeft size={18} />
-                      이전
-                    </button>
-                    <button
-                      onClick={() => rotateServer(set.servingTeam, 1)}
-                      className="flex items-center justify-center gap-1 py-3 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-base transition-colors"
-                    >
-                      다음
-                      <ChevronRight size={18} />
-                    </button>
-                  </div>
-                  <div className="text-[10px] text-slate-500 text-center font-bold uppercase tracking-widest">로테이션</div>
-                  <button
-                    onClick={() => navigate('game-court', { setId })}
-                    className="w-full flex items-center justify-center gap-2 py-3 mt-1 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-base transition-colors"
-                    title="코트 선수·서브 오더 다시 편성"
-                  >
-                    <Settings size={18} />
-                    코트 재편성
-                  </button>
-                </div>
-              )}
             </div>
 
-            {/* Team B — 코트 + 대기 통합 (모바일: 선택 시만) */}
-            <div className={cn('order-2 lg:order-none', mobileTeam === 'B' ? 'block' : 'hidden', 'lg:block')}>
+            {/* Team B (컬럼 내부 스크롤) */}
+            <div className={cn('min-h-0 overflow-y-auto lg:flex-1 lg:block', mobileTeam === 'B' ? 'flex-1' : 'hidden')}>
               <CourtPlayers
                 team="B"
                 teamName={teamB?.name ?? ''}
@@ -2477,6 +2455,79 @@ export default function App() {
             </div>
           </div>
         </main>
+
+        {/* 하단 컨트롤 바 — 항상 보임 (sticky footer) */}
+        {!readOnly && role === 'teacher' && (
+          <footer className="shrink-0 bg-white border-t border-slate-200 px-4 py-3">
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <button onClick={undoLastScore} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border-2 border-orange-300 hover:bg-orange-50 text-orange-700 font-bold text-sm transition-colors">
+                <RotateCcw size={16} /> 득점 취소
+              </button>
+              <div className="flex items-center gap-1">
+                <button onClick={() => rotateServer(set.servingTeam, -1)} className="flex items-center gap-1 px-3 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors"><ChevronLeft size={16} /> 이전</button>
+                <button onClick={() => rotateServer(set.servingTeam, 1)} className="flex items-center gap-1 px-3 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors">다음 <ChevronRight size={16} /></button>
+                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest ml-1 hidden sm:inline">로테이션</span>
+              </div>
+              <button onClick={() => navigate('game-court', { setId })} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors" title="코트 선수·서브 오더 다시 편성">
+                <Users size={16} /> 코트 재편성
+              </button>
+              <button onClick={() => setShowSettings(true)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors" title="인원수·세트수·목표점수 변경">
+                <Settings size={16} /> 경기 설정
+              </button>
+              {maxSets > 1 && (
+                <button onClick={endCurrentSet} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm transition-colors shadow-md">
+                  <CheckCircle2 size={16} /> {matchDecided ? '세트 종료 · 결과 →' : '세트 종료 · 다음 →'}
+                </button>
+              )}
+            </div>
+          </footer>
+        )}
+
+        {/* 경기 설정 수정 모달 (인원수·세트수·목표점수) */}
+        {showSettings && (
+          <ModalOverlay onClose={() => setShowSettings(false)}>
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">경기 설정 수정</div>
+            <div className="space-y-4">
+              <div>
+                <div className="text-[11px] font-bold text-slate-400 mb-1.5">인원수</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[6, 9].map(n => (
+                    <button key={n} onClick={() => applyGameSettings({ courtN: n })}
+                      className={cn('py-2.5 rounded-xl font-black text-sm transition-all', (game.courtN ?? 6) === n ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-400')}>
+                      {n}인제
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-[11px] font-bold text-slate-400 mb-1.5">경기 방식</div>
+                <div className="grid grid-cols-3 gap-2">
+                  {[{ v: 1, l: '단판' }, { v: 3, l: '3전2선승' }, { v: 5, l: '5전3선승' }].map(o => (
+                    <button key={o.v} onClick={() => applyGameSettings({ maxSets: o.v })}
+                      className={cn('py-2.5 rounded-xl font-bold text-xs transition-all', (game.maxSets ?? 1) === o.v ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-400')}>
+                      {o.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-[11px] font-bold text-slate-400 mb-1.5">목표 점수</div>
+                <div className="grid grid-cols-3 gap-2">
+                  {[15, 21, 25].map(n => (
+                    <button key={n} onClick={() => applyGameSettings({ setTarget: n })}
+                      className={cn('py-2.5 rounded-xl font-bold text-sm transition-all', (game.setTarget ?? 25) === n ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-400')}>
+                      {n}점
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="text-[10px] text-amber-400/90 bg-amber-500/10 rounded-lg p-2 leading-relaxed">
+                ※ 인원수를 줄이면 코트 인원이 초과될 수 있어요 — 변경 후 '코트 재편성'으로 확인하세요.
+              </div>
+            </div>
+            <Button variant="primary" className="w-full mt-4" onClick={() => setShowSettings(false)}>완료</Button>
+          </ModalOverlay>
+        )}
 
         {/* Category picker modal — adds Substitution option for teacher */}
         {pendingAction && !pendingAction.category && (
