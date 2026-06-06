@@ -46,7 +46,17 @@ function normalizeData(raw: any): AppData {
     games: Array.isArray(raw.games)
       ? raw.games.map((g: any) => ({
           ...g,
-          sets: Array.isArray(g.sets) ? g.sets : [],
+          // 세트 필수 필드 보강 — collab(원격) 데이터에 playerStats·scoreEvents가
+          // 없으면 통계 집계 시 화면이 죽거나 멈추던 문제 방지(로컬 로드와 동일 처리).
+          sets: Array.isArray(g.sets)
+            ? g.sets.map((s: any) => ({
+                ...s,
+                playerStats: s.playerStats ?? {},
+                scoreEvents: Array.isArray(s.scoreEvents) ? s.scoreEvents : [],
+                courtA: Array.isArray(s.courtA) ? s.courtA : [],
+                courtB: Array.isArray(s.courtB) ? s.courtB : [],
+              }))
+            : [],
         }))
       : [],
     events: Array.isArray(raw.events)
