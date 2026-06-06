@@ -395,104 +395,54 @@ const ScoreboardCard = ({
     );
   };
 
+  void renderDots; // (구 다크 스코어보드용 — 라이트 3카드로 교체됨)
+  const servingA = currentSet.servingTeam === 'A';
+  const servingB = currentSet.servingTeam === 'B';
+
   return (
-    <div className="scoreboard-dark bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-700">
-      {/* 메인 가로 레이아웃 */}
-      <div className="flex items-stretch">
-        {/* 좌측 컬러 사이드바 */}
-        <div className={cn(
-          "w-2.5 transition-all",
-          currentSet.servingTeam === 'A' 
-            ? "bg-orange-500 shadow-lg shadow-orange-500/50" 
-            : "bg-orange-700/60"
-        )} />
-        
-        {/* 좌측 세트 도트 */}
-        {maxSets > 1 && (
-          <div className="flex items-center px-3 bg-slate-900">
-            {renderDots('A')}
-          </div>
-        )}
-
-        {/* 팀 A 영역 — HOME + 팀명 가로 정렬 */}
-        <div className="flex-1 flex items-center justify-end gap-4 px-5 py-5 min-w-0">
-          <div className="flex items-center gap-3 min-w-0 flex-1 justify-end">
-            <div className="text-sm font-black text-orange-400 tracking-[0.25em] flex items-center gap-2 flex-shrink-0">
-              {currentSet.servingTeam === 'A' && (
-                <div className="w-2.5 h-2.5 bg-orange-500 rounded-full animate-pulse shadow-md shadow-orange-500/70" />
-              )}
-              HOME
-            </div>
-            <div className="text-2xl font-black text-white truncate">{teamA?.name}</div>
-          </div>
-          <div className={cn(
-            "text-6xl font-black font-mono tabular-nums leading-none w-20 text-center transition-all flex-shrink-0",
-            currentSet.servingTeam === 'A' ? "text-orange-400" : "text-slate-500"
-          )}>
-            {currentSet.scoreA}
-          </div>
+    <div className="flex items-stretch gap-3">
+      {/* HOME 팀 카드 */}
+      <div className="flex-1 flex items-stretch bg-white rounded-2xl border-2 border-orange-200 shadow-sm overflow-hidden min-w-0">
+        <div className={cn('w-2 self-stretch', servingA ? 'bg-orange-500' : 'bg-orange-200')} />
+        <div className="flex items-center px-1.5">
+          <span className="text-[10px] font-black text-orange-400 tracking-[0.2em] [writing-mode:vertical-rl] rotate-180">HOME</span>
         </div>
-
-        {/* 가운데 — SET 표시 */}
-        <div className="flex flex-col items-center justify-center bg-slate-950 px-5 py-4 border-l border-r border-slate-700 min-w-[110px]">
-          <div className="text-xs font-black text-slate-300 tracking-widest">SET {currentSet.number}</div>
-          <div className="bg-red-600 px-2.5 py-0.5 rounded-md flex items-center gap-1 mt-1.5 shadow-md">
-            <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-            <div className="text-[10px] font-black text-white tracking-widest">LIVE</div>
-          </div>
-          <div className="text-[9px] font-bold text-slate-500 mt-2 tracking-wider">TO {setTarget}</div>
+        <div className="flex-1 flex items-center gap-2.5 pl-1 pr-3 py-4 min-w-0">
+          {servingA && <span className="w-2.5 h-2.5 bg-orange-500 rounded-full animate-pulse shrink-0" />}
+          <span className="text-3xl sm:text-4xl font-black text-slate-900 truncate">{teamA?.name}</span>
         </div>
-
-        {/* 팀 B 영역 — 팀명 + AWAY 가로 정렬 */}
-        <div className="flex-1 flex items-center justify-start gap-4 px-5 py-5 min-w-0">
-          <div className={cn(
-            "text-6xl font-black font-mono tabular-nums leading-none w-20 text-center transition-all flex-shrink-0",
-            currentSet.servingTeam === 'B' ? "text-blue-400" : "text-slate-500"
-          )}>
-            {currentSet.scoreB}
-          </div>
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="text-2xl font-black text-white truncate">{teamB?.name}</div>
-            <div className="text-sm font-black text-blue-400 tracking-[0.25em] flex items-center gap-2 flex-shrink-0">
-              AWAY
-              {currentSet.servingTeam === 'B' && (
-                <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse shadow-md shadow-blue-500/70" />
-              )}
-            </div>
-          </div>
+        <div className={cn('flex items-center pr-5 text-6xl font-black font-mono tabular-nums leading-none', servingA ? 'text-orange-500' : 'text-slate-800')}>
+          {currentSet.scoreA}
         </div>
-
-        {/* 우측 세트 도트 */}
-        {maxSets > 1 && (
-          <div className="flex items-center px-3 bg-slate-900">
-            {renderDots('B')}
-          </div>
-        )}
-
-        {/* 우측 컬러 사이드바 */}
-        <div className={cn(
-          "w-2.5 transition-all",
-          currentSet.servingTeam === 'B' 
-            ? "bg-blue-500 shadow-lg shadow-blue-500/50" 
-            : "bg-blue-700/60"
-        )} />
       </div>
 
-      {/* 이전 세트 점수 (있을 때만) */}
-      {completedSets.length > 0 && (
-        <div className="bg-slate-950 border-t border-slate-700 px-4 py-2 flex justify-center gap-5">
-          {completedSets.map((s, i) => (
-            <div key={i} className="text-center">
-              <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">SET {i + 1}</div>
-              <div className="text-sm font-mono font-bold">
-                <span className={s.scoreA > s.scoreB ? "text-orange-400" : "text-slate-500"}>{s.scoreA}</span>
-                <span className="text-slate-600 mx-1.5">-</span>
-                <span className={s.scoreB > s.scoreA ? "text-blue-400" : "text-slate-500"}>{s.scoreB}</span>
-              </div>
-            </div>
-          ))}
+      {/* SET 카드 (가운데) */}
+      <div className="flex flex-col items-center justify-center bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-3 min-w-[120px] shrink-0">
+        <div className="text-xl font-black text-slate-800 tracking-wide">SET {currentSet.number}</div>
+        <div className="text-[11px] font-bold text-slate-400 tracking-[0.2em] mt-1">TO {setTarget}</div>
+        {maxSets > 1 && (
+          <div className="flex items-center gap-2 mt-2">
+            <div className="flex gap-1">{Array.from({ length: maxSets }, (_, i) => (<div key={'a' + i} className={cn('w-2 h-2 rounded-full', i < setWinsA ? 'bg-orange-500' : 'bg-slate-200')} />))}</div>
+            <span className="text-[9px] font-bold text-slate-300">:</span>
+            <div className="flex gap-1">{Array.from({ length: maxSets }, (_, i) => (<div key={'b' + i} className={cn('w-2 h-2 rounded-full', i < setWinsB ? 'bg-blue-500' : 'bg-slate-200')} />))}</div>
+          </div>
+        )}
+      </div>
+
+      {/* AWAY 팀 카드 */}
+      <div className="flex-1 flex items-stretch bg-white rounded-2xl border-2 border-blue-200 shadow-sm overflow-hidden min-w-0">
+        <div className={cn('flex items-center pl-5 text-6xl font-black font-mono tabular-nums leading-none', servingB ? 'text-blue-500' : 'text-slate-800')}>
+          {currentSet.scoreB}
         </div>
-      )}
+        <div className="flex-1 flex items-center justify-end gap-2.5 pr-1 pl-3 py-4 min-w-0">
+          <span className="text-3xl sm:text-4xl font-black text-slate-900 truncate">{teamB?.name}</span>
+          {servingB && <span className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse shrink-0" />}
+        </div>
+        <div className="flex items-center px-1.5">
+          <span className="text-[10px] font-black text-blue-400 tracking-[0.2em] [writing-mode:vertical-rl]">AWAY</span>
+        </div>
+        <div className={cn('w-2 self-stretch', servingB ? 'bg-blue-500' : 'bg-blue-200')} />
+      </div>
     </div>
   );
 };
