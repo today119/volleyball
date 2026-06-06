@@ -1145,6 +1145,9 @@ export default function App() {
   const [gsTarget, setGsTarget] = useState(25);
   const [gsCourtN, setGsCourtN] = useState(6);
   const [gsMaxSets, setGsMaxSets] = useState(1); // 1=단판, 3=3전2선승, 5=5전3선승
+  // 경기 설정 모달 open 상태도 App 레벨로 — 중첩 게임뷰가 collab 동기화로 리마운트되면
+  // 로컬 useState(false)로 초기화되어 모바일에서 모달이 열리자마자 닫히던(깜빡) 버그 방지.
+  const [showSettings, setShowSettings] = useState(false);
   // Derive currentGame from data.games (single source of truth)
   const currentGame: Game | null = currentGameId 
     ? data.games.find(g => g.id === currentGameId) ?? null 
@@ -2160,8 +2163,7 @@ export default function App() {
     );
     const pickMobileTeam = (t: 'A' | 'B') => { setMobileTeam(t); localStorage.setItem('spike_mobile_team', t); };
 
-    // 경기 설정 수정 모달 (인원수·세트수·목표점수)
-    const [showSettings, setShowSettings] = useState(false);
+    // 경기 설정 수정 모달 open 상태는 App 레벨로 hoist됨(리마운트 견딤).
     const applyGameSettings = (patch: Partial<Pick<Game, 'courtN' | 'maxSets' | 'setTarget'>>) => {
       setData(prev => ({
         ...prev,
