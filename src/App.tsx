@@ -212,32 +212,33 @@ const SessionBadge = ({
   session: { sessionId: string | null; mode: SessionMode }; 
   onShare: () => void;
 }) => {
+  // 모바일은 아이콘만(라벨 텍스트 hidden lg:inline), 데스크톱은 라벨 포함
   if (session.mode === 'solo') {
     return (
-      <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-slate-900 border border-slate-800">
-        <WifiOff size={10} className="text-slate-600" />
-        <span className="text-[9px] font-bold text-slate-600 uppercase tracking-wider">Offline</span>
+      <div className="flex items-center gap-1 px-2 py-1.5 lg:py-1 rounded-md bg-slate-900 border border-slate-800" title="오프라인">
+        <WifiOff size={12} className="text-slate-600" />
+        <span className="hidden lg:inline text-[9px] font-bold text-slate-600 uppercase tracking-wider">Offline</span>
       </div>
     );
   }
   if (session.mode === 'share') {
     return (
-      <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-blue-600/10 border border-blue-600/30">
-        <Eye size={10} className="text-blue-500" />
-        <span className="text-[9px] font-bold text-blue-500 uppercase tracking-wider">읽기전용</span>
+      <div className="flex items-center gap-1 px-2 py-1.5 lg:py-1 rounded-md bg-blue-600/10 border border-blue-600/30" title="읽기 전용">
+        <Eye size={12} className="text-blue-500" />
+        <span className="hidden lg:inline text-[9px] font-bold text-blue-500 uppercase tracking-wider">읽기전용</span>
       </div>
     );
   }
   // collab
   return (
-    <button 
+    <button
       onClick={onShare}
-      className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-600/10 border border-emerald-600/30 hover:bg-emerald-600/20 transition-colors"
-      title="공유 링크 복사"
+      className="flex items-center gap-1 px-2 py-1.5 lg:py-1 rounded-md bg-emerald-600/10 border border-emerald-600/30 hover:bg-emerald-600/20 transition-colors"
+      title="협업중 — 공유 링크 복사"
     >
-      <Wifi size={10} className="text-emerald-500 animate-pulse" />
-      <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-wider">협업중</span>
-      <Share2 size={10} className="text-emerald-500" />
+      <Wifi size={12} className="text-emerald-500 animate-pulse" />
+      <span className="hidden lg:inline text-[9px] font-bold text-emerald-500 uppercase tracking-wider">협업중</span>
+      <Share2 size={11} className="text-emerald-500" />
     </button>
   );
 };
@@ -1228,40 +1229,45 @@ export default function App() {
 
   const HomeView = () => (
     <div className="flex flex-col h-full bg-slate-950 text-slate-50">
-      <header className="p-6 flex justify-between items-center border-b border-slate-900">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-sky-500 rounded-xl flex items-center justify-center shadow-lg shadow-sky-500/30">
-            <Volleyball size={24} className="text-white" />
+      <header className="p-4 lg:p-6 flex justify-between items-center border-b border-slate-900 gap-2">
+        <div className="flex items-center gap-2 lg:gap-3 min-w-0">
+          <div className="w-9 h-9 lg:w-10 lg:h-10 bg-sky-500 rounded-xl flex items-center justify-center shadow-lg shadow-sky-500/30 shrink-0">
+            <Volleyball size={22} className="text-white" />
           </div>
-          <div>
-            <h1 className="text-xl font-black tracking-tight text-white">Spike <span className="text-sky-400">Log</span> Pro</h1>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Volleyball Performance Tracker</p>
+          <div className="min-w-0">
+            <h1 className="text-lg lg:text-xl font-black tracking-tight text-white truncate">Spike <span className="text-sky-400">Log</span> Pro</h1>
+            {/* 태그라인은 모바일에선 하단 푸터로 이동 — 상단을 가볍게 */}
+            <p className="hidden lg:block text-[10px] text-slate-500 font-bold uppercase tracking-widest">Volleyball Performance Tracker</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 lg:gap-2 shrink-0">
           {/* 로그인/로그아웃 — '협업중' 배지와 같은 연한 pill 톤으로 통일 */}
           {canRecord ? (
             <>
-              <span
-                className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-600/10 border border-emerald-600/30 text-[11px] font-bold text-emerald-400 max-w-[150px] truncate"
+              {/* 계정 — 모바일은 아이콘만(탭하면 이메일 토스트), 데스크톱은 이름 표시 */}
+              <button
+                onClick={() => showToast(authUser?.email || authUser?.name || '계정')}
+                className="flex items-center gap-1 px-2 py-1.5 lg:py-1 rounded-md bg-emerald-600/10 border border-emerald-600/30 text-[11px] font-bold text-emerald-400 max-w-[150px] truncate"
                 title={authUser?.email ?? ''}
               >
-                <UserRound size={11} className="flex-shrink-0" />
-                <span className="truncate">{authUser?.name || authUser?.email}</span>
-              </span>
+                <UserRound size={13} className="flex-shrink-0" />
+                <span className="truncate hidden lg:inline">{authUser?.name || authUser?.email}</span>
+              </button>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-1 px-2 py-1 rounded-md bg-slate-700/40 border border-slate-600/50 hover:bg-slate-700/70 text-[11px] font-bold text-slate-300 transition-colors"
+                title="로그아웃"
+                className="flex items-center gap-1 px-2 py-1.5 lg:py-1 rounded-md bg-slate-700/40 border border-slate-600/50 hover:bg-slate-700/70 text-[11px] font-bold text-slate-300 transition-colors"
               >
-                <LogOut size={11} /> 로그아웃
+                <LogOut size={13} /> <span className="hidden lg:inline">로그아웃</span>
               </button>
             </>
           ) : (
             <button
               onClick={handleLogin}
-              className="flex items-center gap-1 px-2 py-1 rounded-md bg-sky-600/10 border border-sky-600/30 hover:bg-sky-600/20 text-[11px] font-bold text-sky-400 transition-colors"
+              title={authUser ? '다른 계정' : '구글 로그인'}
+              className="flex items-center gap-1 px-2 py-1.5 lg:py-1 rounded-md bg-sky-600/10 border border-sky-600/30 hover:bg-sky-600/20 text-[11px] font-bold text-sky-400 transition-colors"
             >
-              <LogIn size={11} /> {authUser ? '다른 계정' : '구글 로그인'}
+              <LogIn size={13} /> <span className="hidden lg:inline">{authUser ? '다른 계정' : '구글 로그인'}</span>
             </button>
           )}
           <SessionBadge session={session} onShare={copyShareLink} />
@@ -1538,17 +1544,19 @@ export default function App() {
         </div>
       </main>
 
-      <footer className="p-6 bg-slate-950 border-t border-slate-900">
-        <Button 
-          variant="primary" 
-          size="lg" 
-          className="w-full shadow-xl shadow-orange-600/20" 
-          onClick={() => navigate('game-setup')} 
+      <footer className="p-4 lg:p-6 bg-slate-950 border-t border-slate-900">
+        <Button
+          variant="primary"
+          size="lg"
+          className="w-full shadow-xl shadow-orange-600/20"
+          onClick={() => navigate('game-setup')}
           icon={Play}
           disabled={readOnly}
         >
           {readOnly ? '읽기 전용 모드' : '새 경기 시작하기'}
         </Button>
+        {/* 태그라인 — 모바일에서만 하단에 옅게(상단에서 내려옴) */}
+        <p className="lg:hidden text-center text-[9px] text-slate-600 font-bold uppercase tracking-[0.3em] mt-3">Volleyball Performance Tracker</p>
       </footer>
     </div>
   );
