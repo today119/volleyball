@@ -89,6 +89,12 @@ function restoreScrollPositions(saved: Map<Element, number>) {
   });
 }
 
+/** games 노드의 게임 수 (배열/keyed-object 모두). */
+function countGames(o: any): number {
+  if (!o || !o.games) return 0;
+  return Array.isArray(o.games) ? o.games.length : Object.keys(o.games).length;
+}
+
 export function useFirebaseSync({
   sessionId,
   data,
@@ -98,6 +104,8 @@ export function useFirebaseSync({
 }: UseFirebaseSyncOptions) {
   const hasInitialized = useRef(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 클라우드(원격)의 현재 게임 수 — 스냅샷마다 갱신. write 전 "줄어들면 차단" 가드에 사용.
+  const lastRemoteGamesRef = useRef(0);
   // 마지막으로 반영/송신한 데이터의 정규화 JSON.
   // 원격 스냅샷·로컬 쓰기 양쪽에서 이 값과 비교해, 내용이 같으면 setData/write를 건너뛴다.
   // → 자기 쓰기가 echo로 돌아와도 무시 → "스냅샷→setData→write→echo→setData…" 피드백 루프 차단
@@ -124,6 +132,8 @@ export function useFirebaseSync({
 
     const handler = ref.on('value', (snapshot) => {
       const remoteData = snapshot.val();
+      // 원격 게임 수를 항상 최신으로 기록(채택 여부와 무관) — write 가드용.
+      lastRemoteGamesRef.current = countGames(remoteData);
 
       if (!hasInitialized.current) {
         // First snapshot — "콘텐츠 풍부함" 기준 머지 (타임스탬프 단독 신뢰 금지).
@@ -137,8 +147,6 @@ export function useFirebaseSync({
         //  - 원격이 더 많으면 → 원격 채택 (빈/적은 로컬이 클라우드를 절대 못 덮음).
         //  - 로컬이 더 많으면 → 로컬 유지 → write effect가 클라우드 복구.
         //  - 동수면 → ts 최신 우선.
-        const countGames = (o: any) =>
-          o && o.games ? (Array.isArray(o.games) ? o.games.length : Object.keys(o.games).length) : 0;
         const remoteGames = countGames(remoteData);
         let localGames = 0;
         try { localGames = countGames(JSON.parse(localStorage.getItem('spike_log_v1') || '{}')); } catch { /* ignore */ }
@@ -176,6 +184,15 @@ export function useFirebaseSync({
     // 내용이 직전 동기화 상태와 동일하면(=원격에서 막 반영된 데이터) 쓰지 않는다 → echo 루프 차단.
     const json = JSON.stringify(normalizeData(data));
     if (json === lastJsonRef.current) return;
+
+    // ★ 게임 소실 방지 가드: 로컬 게임 수가 클라우드보다 적으면 전체 쓰기를 막는다.
+    // (빈/적은 로컬이 whole-tree set 으로 클라우드 games 를 통째로 덮어써 전부 날아가던 사고 차단.)
+    // 게임 추가/통계 기록은 게임 수가 유지·증가하므로 통과. 게임 삭제만 막힘(안전 우선).
+    const localGames = countGames(data);
+    if (localGames < lastRemoteGamesRef.current) {
+      console.warn(`[firebase-sync] write BLOCKED — local games(${localGames}) < cloud games(${lastRemoteGamesRef.current}); 클라우드 보호.`);
+      return;
+    }
 
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
