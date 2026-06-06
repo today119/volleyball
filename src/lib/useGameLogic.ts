@@ -120,11 +120,16 @@ export function useGameLogic({
       if (scoringTeam === 'A') scoreA += 1;
       if (scoringTeam === 'B') scoreB += 1;
 
-      // 4. Rotation: if the scoring team WASN'T the previous serving team,
-      //    they sideout and rotate one position before serving.
+      // 4. Side-out: if the scoring team WASN'T the serving team, serve passes.
+      //    Volleyball rule: the team that just GAINED serve serves with its
+      //    current rotation position (its first server stays index 0). The team
+      //    that LOST serve advances its own rotation, so that next time it earns
+      //    serve back the next player serves. (Previously this incorrectly
+      //    rotated the team that gained serve, skipping its #1 server.)
       if (scoringTeam && scoringTeam !== servingTeam) {
+        const losingTeam = servingTeam; // the team that just lost the serve
         servingTeam = scoringTeam;
-        if (scoringTeam === 'A') {
+        if (losingTeam === 'A') {
           serverIdxA = (serverIdxA + 1) % Math.max(set.courtA.length, 1);
         } else {
           serverIdxB = (serverIdxB + 1) % Math.max(set.courtB.length, 1);
