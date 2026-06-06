@@ -400,56 +400,76 @@ const ScoreboardCard = ({
   const servingA = currentSet.servingTeam === 'A';
   const servingB = currentSet.servingTeam === 'B';
 
+  // 세트 점 (세로 배치, 라벨 옆) — 모바일 전용
+  const mobileDots = (team: 'A' | 'B') => {
+    if (maxSets <= 1) return null;
+    const wins = team === 'A' ? setWinsA : setWinsB;
+    const onCls = team === 'A' ? 'bg-orange-500' : 'bg-blue-500';
+    const offCls = team === 'A' ? 'bg-orange-100 border border-orange-200' : 'bg-blue-100 border border-blue-200';
+    return (
+      <div className="flex lg:hidden flex-col gap-1" title={`세트 ${wins} / ${maxSets}`}>
+        {Array.from({ length: maxSets }, (_, i) => (
+          <div key={'md' + team + i} className={cn('w-1.5 h-1.5 rounded-full', i < wins ? onCls : offCls)} />
+        ))}
+      </div>
+    );
+  };
+
   return (
-    // gap·SET박스 폭을 아래 명단 그리드(gap-4, 가운데 lg:w-[300px])에 맞춤 → 세 박스가 컬럼과 정렬
-    <div className="flex items-stretch gap-2 lg:gap-4">
-      {/* HOME 팀 카드 — 왼쪽 팀 컬럼 폭(flex-1)에 정렬 */}
-      <div className="flex-1 flex items-stretch bg-white rounded-2xl border-2 border-orange-200 shadow-sm overflow-hidden min-w-0">
-        <div className={cn('w-1.5 self-stretch', servingA ? 'bg-orange-400' : 'bg-orange-100')} />
-        <div className="flex items-center px-1.5">
-          <span className="text-[10px] font-black text-orange-400 tracking-[0.2em] [writing-mode:vertical-rl] rotate-180">HOME</span>
+    // gap·SET박스 폭을 아래 명단 그리드에 맞춤. 모바일은 팀명 숨기고 점수만 크게(겹침 방지).
+    <div className="flex items-stretch gap-1.5 lg:gap-4">
+      {/* HOME 팀 카드 */}
+      <div className="flex-1 flex items-stretch bg-white rounded-xl lg:rounded-2xl border-2 border-orange-200 shadow-sm overflow-hidden min-w-0">
+        <div className={cn('w-1 lg:w-1.5 self-stretch', servingA ? 'bg-orange-400' : 'bg-orange-100')} />
+        {/* 바깥(좌) 세로 라벨 + 모바일 세트 점 */}
+        <div className="flex flex-col items-center justify-center gap-1.5 px-1 lg:px-1.5 shrink-0">
+          <span className="text-[9px] lg:text-[10px] font-black text-orange-400 tracking-[0.2em] [writing-mode:vertical-rl] rotate-180">HOME</span>
+          {mobileDots('A')}
         </div>
-        <div className="flex-1 flex flex-col justify-center pl-1 pr-3 py-3 min-w-0">
+        {/* 팀명 — 데스크톱만 (모바일은 아래 토글에 팀명 있음) */}
+        <div className="hidden lg:flex lg:flex-1 lg:flex-col justify-center pl-1 pr-3 py-3 min-w-0">
           <span className="text-3xl sm:text-4xl font-black text-slate-900 truncate leading-tight">{teamA?.name}</span>
           {maxSets > 1 && (
-            <div className="flex gap-1 mt-1.5" title={`세트 ${setWinsA} / ${maxSets}`}>
+            <div className="flex gap-1 mt-1.5">
               {Array.from({ length: maxSets }, (_, i) => (
                 <div key={'sa' + i} className={cn('w-2.5 h-2.5 rounded-full', i < setWinsA ? 'bg-orange-500' : 'bg-orange-100 border border-orange-200')} />
               ))}
             </div>
           )}
         </div>
-        <div className={cn('flex items-center pr-5 text-6xl font-black font-mono tabular-nums leading-none', servingA ? 'text-orange-500' : 'text-slate-800')}>
+        {/* 점수 — 모바일 가운데/축소, 데스크톱 우측/크게 */}
+        <div className={cn('flex-1 flex items-center justify-center lg:justify-end py-2.5 lg:py-0 px-1 lg:pr-5 text-4xl lg:text-6xl font-black font-mono tabular-nums leading-none', servingA ? 'text-orange-500' : 'text-slate-800')}>
           {currentSet.scoreA}
         </div>
       </div>
 
-      {/* SET 카드 (가운데) — 가운데 타워 컬럼 폭(lg:w-[300px])에 정렬 */}
-      <div className="flex flex-col items-center justify-center self-stretch bg-slate-50 rounded-2xl border border-slate-200 shadow-sm px-4 min-w-[96px] lg:w-[300px] lg:px-0 shrink-0">
-        <div className="text-3xl sm:text-4xl font-black text-slate-800 tracking-wide leading-none">SET {currentSet.number}</div>
-        <div className="text-xs font-bold text-slate-400 tracking-[0.25em] mt-2">TO {setTarget}</div>
-        {/* 세트 점수(딴 세트 수) 동그라미는 각 팀 박스로 이동 — 가운데는 중복 제거 */}
+      {/* SET 카드 (가운데) — 모바일은 좁게, 데스크톱은 타워 컬럼 폭 */}
+      <div className="flex flex-col items-center justify-center self-stretch bg-slate-50 rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm w-14 lg:w-[300px] px-1 lg:px-0 shrink-0">
+        <div className="text-sm lg:text-4xl font-black text-slate-800 tracking-tight lg:tracking-wide leading-none whitespace-nowrap">SET {currentSet.number}</div>
+        <div className="text-[8px] lg:text-xs font-bold text-slate-400 tracking-wider lg:tracking-[0.25em] mt-0.5 lg:mt-2 whitespace-nowrap">TO {setTarget}</div>
       </div>
 
-      {/* AWAY 팀 카드 — 오른쪽 팀 컬럼 폭(flex-1)에 정렬 */}
-      <div className="flex-1 flex items-stretch bg-white rounded-2xl border-2 border-blue-200 shadow-sm overflow-hidden min-w-0">
-        <div className={cn('flex items-center pl-5 text-6xl font-black font-mono tabular-nums leading-none', servingB ? 'text-blue-500' : 'text-slate-800')}>
+      {/* AWAY 팀 카드 */}
+      <div className="flex-1 flex items-stretch bg-white rounded-xl lg:rounded-2xl border-2 border-blue-200 shadow-sm overflow-hidden min-w-0">
+        <div className={cn('flex-1 flex items-center justify-center lg:justify-start py-2.5 lg:py-0 px-1 lg:pl-5 text-4xl lg:text-6xl font-black font-mono tabular-nums leading-none', servingB ? 'text-blue-500' : 'text-slate-800')}>
           {currentSet.scoreB}
         </div>
-        <div className="flex-1 flex flex-col justify-center items-end pr-1 pl-3 py-3 min-w-0">
+        <div className="hidden lg:flex lg:flex-1 lg:flex-col justify-center items-end pr-1 pl-3 py-3 min-w-0">
           <span className="text-3xl sm:text-4xl font-black text-slate-900 truncate leading-tight">{teamB?.name}</span>
           {maxSets > 1 && (
-            <div className="flex gap-1 mt-1.5" title={`세트 ${setWinsB} / ${maxSets}`}>
+            <div className="flex gap-1 mt-1.5">
               {Array.from({ length: maxSets }, (_, i) => (
                 <div key={'sb' + i} className={cn('w-2.5 h-2.5 rounded-full', i < setWinsB ? 'bg-blue-500' : 'bg-blue-100 border border-blue-200')} />
               ))}
             </div>
           )}
         </div>
-        <div className="flex items-center px-1.5">
-          <span className="text-[10px] font-black text-blue-400 tracking-[0.2em] [writing-mode:vertical-rl]">AWAY</span>
+        {/* 바깥(우) 세로 라벨 + 모바일 세트 점 */}
+        <div className="flex flex-col items-center justify-center gap-1.5 px-1 lg:px-1.5 shrink-0">
+          <span className="text-[9px] lg:text-[10px] font-black text-blue-400 tracking-[0.2em] [writing-mode:vertical-rl]">AWAY</span>
+          {mobileDots('B')}
         </div>
-        <div className={cn('w-1.5 self-stretch', servingB ? 'bg-blue-400' : 'bg-blue-100')} />
+        <div className={cn('w-1 lg:w-1.5 self-stretch', servingB ? 'bg-blue-400' : 'bg-blue-100')} />
       </div>
     </div>
   );
