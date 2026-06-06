@@ -51,7 +51,7 @@ export function useGameLogic({
 
   /** Get/create empty stats for a player. */
   const getStats = (set: GameSet, playerId: PlayerId): PlayerStats =>
-    set.playerStats[playerId] ?? { ...EMPTY_STATS };
+    set.playerStats?.[playerId] ?? { ...EMPTY_STATS };
 
   /** Which team is a given player on? Returns 'A' | 'B' | null. */
   const teamOf = useCallback((playerId: PlayerId): 'A' | 'B' | null => {
@@ -85,7 +85,7 @@ export function useGameLogic({
     if (!outcome) return;
 
     updateCurrentSet((set) => {
-      const newStats = { ...set.playerStats };
+      const newStats = { ...(set.playerStats ?? {}) };
       
       // 1. Increment the player's outcome counter
       const playerStats = getStats(set, playerId);
@@ -139,7 +139,7 @@ export function useGameLogic({
       // 5. Score event for cumulative graph (only on scoring events)
       const scoreEvents = scoringTeam
         ? [
-            ...set.scoreEvents,
+            ...(set.scoreEvents ?? []),
             {
               timestamp: Date.now(),
               team: scoringTeam,
@@ -168,21 +168,21 @@ export function useGameLogic({
    */
   const undoLastScore = useCallback(() => {
     updateCurrentSet((set) => {
-      if (set.scoreEvents.length === 0) return set;
-      
-      const last = set.scoreEvents[set.scoreEvents.length - 1];
-      const prevScore = set.scoreEvents[set.scoreEvents.length - 2];
+      const evts = set.scoreEvents ?? [];
+      if (evts.length === 0) return set;
+
+      const prevScore = evts[evts.length - 2];
       const newScoreA = prevScore?.scoreA ?? 0;
       const newScoreB = prevScore?.scoreB ?? 0;
-      
-      // Note: we can't perfectly reverse which stat was incremented without 
-      // storing the action details in scoreEvents. For now, undo only rewinds 
+
+      // Note: we can't perfectly reverse which stat was incremented without
+      // storing the action details in scoreEvents. For now, undo only rewinds
       // score+events. Stat correction needs the −1 button.
       return {
         ...set,
         scoreA: newScoreA,
         scoreB: newScoreB,
-        scoreEvents: set.scoreEvents.slice(0, -1),
+        scoreEvents: evts.slice(0, -1),
       };
     });
   }, [updateCurrentSet]);

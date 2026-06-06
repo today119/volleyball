@@ -17,7 +17,7 @@ export function aggregatePlayerStatsInGame(
 ): PlayerStats {
   const totals = { ...EMPTY_STATS };
   for (const set of game.sets) {
-    const s = set.playerStats[playerId];
+    const s = set.playerStats?.[playerId];
     if (!s) continue;
     (Object.keys(totals) as Array<keyof PlayerStats>).forEach(k => {
       totals[k] += s[k] ?? 0;
@@ -167,7 +167,7 @@ export function calculatePlayerEvaluation(
 
   // Game record — fixed if player participated in any game
   const participated = data.games.some(g =>
-    g.sets.some(s => s.playerStats[player.id])
+    g.sets.some(s => s.playerStats?.[player.id])
   );
   const gameRecordScore = participated ? data.criteria.gameRecord : 0;
 
