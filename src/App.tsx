@@ -416,12 +416,12 @@ const ScoreboardCard = ({
         </div>
       </div>
 
-      {/* SET 카드 (가운데) */}
-      <div className="flex flex-col items-center justify-center bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-3 min-w-[120px] shrink-0">
-        <div className="text-xl font-black text-slate-800 tracking-wide">SET {currentSet.number}</div>
-        <div className="text-[11px] font-bold text-slate-400 tracking-[0.2em] mt-1">TO {setTarget}</div>
+      {/* SET 카드 (가운데) — 풀하이트, 회색 채움, 큰 SET 텍스트 (레퍼런스 일치) */}
+      <div className="flex flex-col items-center justify-center self-stretch bg-slate-50 rounded-2xl border border-slate-200 shadow-sm px-6 min-w-[140px] shrink-0">
+        <div className="text-3xl sm:text-4xl font-black text-slate-800 tracking-wide leading-none">SET {currentSet.number}</div>
+        <div className="text-xs font-bold text-slate-400 tracking-[0.25em] mt-2">TO {setTarget}</div>
         {maxSets > 1 && (
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-3">
             <div className="flex gap-1">{Array.from({ length: maxSets }, (_, i) => (<div key={'a' + i} className={cn('w-2 h-2 rounded-full', i < setWinsA ? 'bg-orange-500' : 'bg-slate-200')} />))}</div>
             <span className="text-[9px] font-bold text-slate-300">:</span>
             <div className="flex gap-1">{Array.from({ length: maxSets }, (_, i) => (<div key={'b' + i} className={cn('w-2 h-2 rounded-full', i < setWinsB ? 'bg-blue-500' : 'bg-slate-200')} />))}</div>
@@ -2304,37 +2304,38 @@ export default function App() {
 
     return (
       <div className="flex flex-col h-full bg-slate-950 text-slate-50 overflow-hidden">
-        {/* Top header bar */}
-        <header className="bg-white px-4 py-3 border-b border-slate-200 shadow-sm z-10 flex items-center justify-between">
-          <button 
+        {/* Top header bar — 모바일은 아이콘 위주로 컴팩트, 데스크톱은 라벨 표시 */}
+        <header className="bg-white px-3 lg:px-4 py-2.5 lg:py-3 border-b border-slate-200 shadow-sm z-10 flex items-center justify-between gap-2">
+          <button
             onClick={() => navigate('home')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-base font-bold transition-colors border border-slate-200"
+            className="flex items-center gap-2 px-2.5 lg:px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-base font-bold transition-colors border border-slate-200 shrink-0"
             title="진행 상태 유지하며 홈으로"
           >
             <ChevronLeft size={18} />
-            일시중단
+            <span className="hidden lg:inline">일시중단</span>
           </button>
-          <div className="flex items-center gap-2">
+          {/* 상태 칩 묶음 — 모바일은 작게 */}
+          <div className="flex items-center gap-1.5 min-w-0">
             <RoleBadge role={role} />
-            <div className="text-sm font-black text-slate-600 uppercase tracking-wider bg-slate-100 px-3 py-1.5 rounded-lg">SET {setId + 1}</div>
-            <div className="text-sm font-black text-orange-600 uppercase tracking-wider bg-orange-50 px-3 py-1.5 rounded-lg">{game.format}</div>
+            <div className="text-xs lg:text-sm font-black text-slate-600 uppercase tracking-wider bg-slate-100 px-2 lg:px-3 py-1 lg:py-1.5 rounded-lg whitespace-nowrap">SET {setId + 1}</div>
+            <div className="text-xs lg:text-sm font-black text-orange-600 uppercase tracking-wider bg-orange-50 px-2 lg:px-3 py-1 lg:py-1.5 rounded-lg whitespace-nowrap">{game.format}</div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 lg:gap-2 shrink-0">
             <button
               onClick={() => navigate('dashboard', { gameId: game.id })}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-base font-bold transition-colors border border-slate-200"
+              className="flex items-center gap-2 px-2.5 lg:px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-base font-bold transition-colors border border-slate-200"
               title="현재까지 기록·통계 보기"
             >
               <History size={18} />
-              기록
+              <span className="hidden lg:inline">기록</span>
             </button>
             <button
               onClick={() => navigate('dashboard', { gameId: game.id })}
               disabled={readOnly}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-base font-black transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-3 lg:px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm lg:text-base font-black transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save size={18} />
-              경기 종료
+              <span className="hidden sm:inline">경기 종료</span>
             </button>
           </div>
         </header>
@@ -2381,11 +2382,35 @@ export default function App() {
               />
             </div>
 
-            {/* Center 득점 타워 — 데스크톱만, 항상 보임 */}
-            <div className="hidden lg:flex lg:w-[300px] shrink-0 flex-col min-h-0">
+            {/* Center 득점 타워 + 컨트롤 — 데스크톱만, 항상 보임 (레퍼런스: 타워 아래 컨트롤) */}
+            <div className="hidden lg:flex lg:w-[300px] shrink-0 flex-col min-h-0 gap-3">
               <div className="bg-white rounded-2xl border border-slate-200 p-3 flex-1 overflow-y-auto flex items-start justify-center shadow-sm">
                 <ScoreTowerVertical scoreEvents={set.scoreEvents ?? []} teamA={teamA} teamB={teamB} />
               </div>
+              {!readOnly && role === 'teacher' && (
+                <div className="shrink-0 flex flex-col gap-2">
+                  <button onClick={undoLastScore} className="flex items-center justify-center gap-1.5 w-full px-4 py-2.5 rounded-xl bg-white border-2 border-orange-300 hover:bg-orange-50 text-orange-700 font-bold text-sm transition-colors">
+                    <RotateCcw size={16} /> 득점 취소
+                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => rotateServer(set.servingTeam, -1)} className="flex items-center justify-center gap-1 px-3 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors"><ChevronLeft size={16} /> 이전</button>
+                    <button onClick={() => rotateServer(set.servingTeam, 1)} className="flex items-center justify-center gap-1 px-3 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors">다음 <ChevronRight size={16} /></button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => navigate('game-court', { setId })} className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors" title="코트 선수·서브 오더 다시 편성">
+                      <Users size={16} /> 코트 재편성
+                    </button>
+                    <button onClick={() => setShowSettings(true)} className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors" title="인원수·세트수·목표점수 변경">
+                      <Settings size={16} /> 경기 설정
+                    </button>
+                  </div>
+                  {maxSets > 1 && (
+                    <button onClick={endCurrentSet} className="flex items-center justify-center gap-1.5 w-full px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm transition-colors shadow-md">
+                      <CheckCircle2 size={16} /> {matchDecided ? '세트 종료 · 결과 →' : '세트 종료 · 다음 →'}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Team B (컬럼 내부 스크롤) */}
@@ -2406,27 +2431,26 @@ export default function App() {
           </div>
         </main>
 
-        {/* 하단 컨트롤 바 — 항상 보임 (sticky footer) */}
+        {/* 하단 컨트롤 바 — 모바일 전용 (데스크톱은 가운데 컬럼에 표시) */}
         {!readOnly && role === 'teacher' && (
-          <footer className="shrink-0 bg-white border-t border-slate-200 px-4 py-3">
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <button onClick={undoLastScore} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border-2 border-orange-300 hover:bg-orange-50 text-orange-700 font-bold text-sm transition-colors">
-                <RotateCcw size={16} /> 득점 취소
+          <footer className="lg:hidden shrink-0 bg-white border-t border-slate-200 px-3 py-2.5">
+            <div className="flex items-center gap-2">
+              {/* 핵심 액션: 득점 취소 · 이전 · 다음 — 한 줄 균등 */}
+              <button onClick={undoLastScore} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl bg-white border-2 border-orange-300 hover:bg-orange-50 text-orange-700 font-bold text-sm transition-colors">
+                <RotateCcw size={16} /> 취소
               </button>
-              <div className="flex items-center gap-1">
-                <button onClick={() => rotateServer(set.servingTeam, -1)} className="flex items-center gap-1 px-3 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors"><ChevronLeft size={16} /> 이전</button>
-                <button onClick={() => rotateServer(set.servingTeam, 1)} className="flex items-center gap-1 px-3 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors">다음 <ChevronRight size={16} /></button>
-                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest ml-1 hidden sm:inline">로테이션</span>
-              </div>
-              <button onClick={() => navigate('game-court', { setId })} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors" title="코트 선수·서브 오더 다시 편성">
-                <Users size={16} /> 코트 재편성
+              <button onClick={() => rotateServer(set.servingTeam, -1)} className="flex-1 flex items-center justify-center gap-1 px-2 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors"><ChevronLeft size={16} /> 이전</button>
+              <button onClick={() => rotateServer(set.servingTeam, 1)} className="flex-1 flex items-center justify-center gap-1 px-2 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors">다음 <ChevronRight size={16} /></button>
+              {/* 보조 액션: 아이콘 버튼으로 묶음 */}
+              <button onClick={() => navigate('game-court', { setId })} className="shrink-0 p-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-500 transition-colors" title="코트 재편성 — 선수·서브 오더 다시 편성">
+                <Users size={18} />
               </button>
-              <button onClick={() => setShowSettings(true)} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors" title="인원수·세트수·목표점수 변경">
-                <Settings size={16} /> 경기 설정
+              <button onClick={() => setShowSettings(true)} className="shrink-0 p-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-500 transition-colors" title="경기 설정 — 인원수·세트수·목표점수 변경">
+                <Settings size={18} />
               </button>
               {maxSets > 1 && (
-                <button onClick={endCurrentSet} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm transition-colors shadow-md">
-                  <CheckCircle2 size={16} /> {matchDecided ? '세트 종료 · 결과 →' : '세트 종료 · 다음 →'}
+                <button onClick={endCurrentSet} className="shrink-0 p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-md" title={matchDecided ? '세트 종료 · 결과 보기' : '세트 종료 · 다음 세트'}>
+                  <CheckCircle2 size={18} />
                 </button>
               )}
             </div>
