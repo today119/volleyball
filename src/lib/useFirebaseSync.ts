@@ -72,10 +72,10 @@ function normalizeData(raw: any): AppData {
   };
 }
 
-/** 현재 페이지의 스크롤 가능한 요소 위치 저장/복원 */
+/** 스크롤 컨테이너만 저장/복원 (전체 DOM `*` 스캔 제거 — 매 동기화 리플로우·플리커 방지) */
 function saveScrollPositions(): Map<Element, number> {
   const map = new Map<Element, number>();
-  document.querySelectorAll('*').forEach(el => {
+  document.querySelectorAll('.overflow-y-auto, .overflow-auto, [data-scrollable]').forEach(el => {
     if ((el as HTMLElement).scrollTop > 0) map.set(el, (el as HTMLElement).scrollTop);
   });
   return map;
@@ -96,9 +96,13 @@ export function useFirebaseSync({
   readOnly,
   enabled,
 }: UseFirebaseSyncOptions) {
-  const isRemoteUpdate = useRef(false);
   const hasInitialized = useRef(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 마지막으로 반영/송신한 데이터의 정규화 JSON.
+  // 원격 스냅샷·로컬 쓰기 양쪽에서 이 값과 비교해, 내용이 같으면 setData/write를 건너뛴다.
+  // → 자기 쓰기가 echo로 돌아와도 무시 → "스냅샷→setData→write→echo→setData…" 피드백 루프 차단
+  //   → 모달 떠 있는 동안 800ms 주기 리렌더(=플리커) 제거.
+  const lastJsonRef = useRef<string>('');
 
   // ── Subscribe to remote updates ─────────────────────────────────────
   useEffect(() => {
@@ -106,6 +110,17 @@ export function useFirebaseSync({
 
     hasInitialized.current = false;
     const ref = database.ref(`spikelog/${sessionId}`);
+
+    /** 내용이 바뀐 경우에만 setData. 동일 스냅샷(자기 echo 포함)은 무시. */
+    const applyIfChanged = (cleanData: any) => {
+      const normalized = normalizeData(cleanData);
+      const json = JSON.stringify(normalized);
+      if (json === lastJsonRef.current) return; // 변화 없음 → 리렌더 안 함
+      lastJsonRef.current = json;
+      const scrollPos = saveScrollPositions();
+      setData(normalized);
+      restoreScrollPositions(scrollPos);
+    };
 
     const handler = ref.on('value', (snapshot) => {
       const remoteData = snapshot.val();
@@ -115,32 +130,18 @@ export function useFirebaseSync({
         const remoteTs = (remoteData && remoteData.lastUpdate) || 0;
         const localTs = Number(localStorage.getItem('spike_log_v1_ts') || 0);
         if (remoteData && remoteTs >= localTs) {
-          // 원격이 더 최신(또는 동급) → 원격으로 교체
           const { lastUpdate, ...cleanData } = remoteData;
-          const scrollPos = saveScrollPositions();
-          isRemoteUpdate.current = true;
-          setData(normalizeData(cleanData));
-          queueMicrotask(() => {
-            isRemoteUpdate.current = false;
-          });
-          restoreScrollPositions(scrollPos);
+          applyIfChanged(cleanData);
         }
-        // 원격이 비었거나 로컬이 더 최신이면 → 아래 write effect가 로컬을 push
         hasInitialized.current = true;
         return;
       }
 
       if (!remoteData) return;
 
-      // Subsequent remote update (from another device)
+      // Subsequent remote update (from another device or our own echo)
       const { lastUpdate, ...cleanData } = remoteData;
-      const scrollPos = saveScrollPositions();
-      isRemoteUpdate.current = true;
-      setData(normalizeData(cleanData));
-      queueMicrotask(() => {
-        isRemoteUpdate.current = false;
-      });
-      restoreScrollPositions(scrollPos);
+      applyIfChanged(cleanData);
     });
 
     return () => {
@@ -153,13 +154,17 @@ export function useFirebaseSync({
   useEffect(() => {
     if (!enabled || !sessionId || readOnly) return;
     if (!hasInitialized.current) return; // wait for initial pull
-    if (isRemoteUpdate.current) return;  // don't echo remote updates back
+
+    // 내용이 직전 동기화 상태와 동일하면(=원격에서 막 반영된 데이터) 쓰지 않는다 → echo 루프 차단.
+    const json = JSON.stringify(normalizeData(data));
+    if (json === lastJsonRef.current) return;
 
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
     }
 
     debounceTimer.current = setTimeout(() => {
+      lastJsonRef.current = json; // echo로 되돌아올 동일 데이터를 미리 무시 등록
       const ref = database.ref(`spikelog/${sessionId}`);
       ref
         .set({ ...data, lastUpdate: Date.now() })
