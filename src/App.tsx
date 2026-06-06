@@ -400,55 +400,39 @@ const ScoreboardCard = ({
   const servingA = currentSet.servingTeam === 'A';
   const servingB = currentSet.servingTeam === 'B';
 
-  // 세트 점(딴 세트 수) — 모바일은 가로 한 줄(라벨 아래), 데스크톱은 팀명 아래에서 별도 렌더
-  const mobileDots = (team: 'A' | 'B') => {
+  // 세트 점(딴 세트 수) — 라벨 옆 세로 스택. 모바일·데스크톱 공통(스케치: HOME옆 점들)
+  const setDots = (team: 'A' | 'B') => {
     if (maxSets <= 1) return null;
     const wins = team === 'A' ? setWinsA : setWinsB;
     const onCls = team === 'A' ? 'bg-orange-500' : 'bg-blue-500';
     const offCls = team === 'A' ? 'bg-orange-100 border border-orange-200' : 'bg-blue-100 border border-blue-200';
     return (
-      <div className="flex lg:hidden gap-1 mt-1" title={`세트 ${wins} / ${maxSets}`}>
+      <div className="flex flex-col items-center justify-center gap-1 px-0.5 lg:px-1 shrink-0" title={`세트 ${wins} / ${maxSets}`}>
         {Array.from({ length: maxSets }, (_, i) => (
-          <div key={'md' + team + i} className={cn('w-1.5 h-1.5 rounded-full', i < wins ? onCls : offCls)} />
-        ))}
-      </div>
-    );
-  };
-  // 데스크톱 팀명 아래 세트 점
-  const desktopDots = (team: 'A' | 'B') => {
-    if (maxSets <= 1) return null;
-    const wins = team === 'A' ? setWinsA : setWinsB;
-    const onCls = team === 'A' ? 'bg-orange-500' : 'bg-blue-500';
-    const offCls = team === 'A' ? 'bg-orange-100 border border-orange-200' : 'bg-blue-100 border border-blue-200';
-    return (
-      <div className="flex gap-1 mt-1.5">
-        {Array.from({ length: maxSets }, (_, i) => (
-          <div key={'dd' + team + i} className={cn('w-2.5 h-2.5 rounded-full', i < wins ? onCls : offCls)} />
+          <div key={'d' + team + i} className={cn('w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full', i < wins ? onCls : offCls)} />
         ))}
       </div>
     );
   };
 
   return (
-    // 모바일: 각 팀 박스 = 세로 스택(라벨→세트점→점수). 데스크톱: 가로(lg:order로 재배치).
+    // 박스 안: [HOME 세로라벨][세트점][(데스크톱)팀명][큰 점수]. AWAY는 좌우 대칭.
     <div className="flex items-stretch gap-1.5 lg:gap-4">
       {/* HOME 팀 카드 */}
-      <div className="flex-1 flex flex-col items-center lg:flex-row lg:items-stretch bg-white rounded-xl lg:rounded-2xl border-2 border-orange-200 shadow-sm overflow-hidden min-w-0 py-2 lg:py-0">
-        {/* 서브 바 — 데스크톱 좌측 가장자리만 */}
-        <div className={cn('hidden lg:block w-1.5 self-stretch', servingA ? 'bg-orange-400' : 'bg-orange-100')} />
-        {/* HOME 라벨 — 모바일 상단 가로글씨, 데스크톱 좌측 세로글씨 */}
-        <div className="flex items-center justify-center lg:px-1.5 shrink-0">
-          <span className="text-[10px] font-black text-orange-400 tracking-[0.2em] lg:[writing-mode:vertical-rl] lg:rotate-180">HOME</span>
+      <div className="flex-1 flex items-stretch bg-white rounded-xl lg:rounded-2xl border-2 border-orange-200 shadow-sm overflow-hidden min-w-0">
+        <div className={cn('w-1 lg:w-1.5 self-stretch', servingA ? 'bg-orange-400' : 'bg-orange-100')} />
+        {/* HOME 세로 라벨 */}
+        <div className="flex items-center justify-center px-1 lg:px-1.5 shrink-0">
+          <span className="text-[9px] lg:text-[10px] font-black text-orange-400 tracking-[0.2em] [writing-mode:vertical-rl] rotate-180">HOME</span>
         </div>
-        {/* 세트 점 — 모바일: 라벨 아래 가로줄 */}
-        {mobileDots('A')}
-        {/* 팀명 — 데스크톱만 */}
-        <div className="hidden lg:flex lg:flex-1 lg:flex-col justify-center pl-1 pr-3 py-3 min-w-0">
+        {/* 세트 점 — 라벨 옆 */}
+        {setDots('A')}
+        {/* 팀명 — 데스크톱만 (모바일은 아래 토글에 팀명 있음) */}
+        <div className="hidden lg:flex lg:flex-1 lg:items-center pl-2 pr-3 py-3 min-w-0">
           <span className="text-3xl sm:text-4xl font-black text-slate-900 truncate leading-tight">{teamA?.name}</span>
-          {desktopDots('A')}
         </div>
-        {/* 점수 — 모바일 하단 크게(가운데), 데스크톱 우측 */}
-        <div className={cn('flex-1 flex items-center justify-center lg:justify-end mt-1 lg:mt-0 lg:pr-5 text-4xl lg:text-6xl font-black font-mono tabular-nums leading-none', servingA ? 'text-orange-500' : 'text-slate-800')}>
+        {/* 큰 점수 */}
+        <div className={cn('flex-1 lg:flex-none flex items-center justify-center lg:justify-end py-2.5 lg:py-0 px-1 lg:pr-5 text-4xl lg:text-6xl font-black font-mono tabular-nums leading-none', servingA ? 'text-orange-500' : 'text-slate-800')}>
           {currentSet.scoreA}
         </div>
       </div>
@@ -459,25 +443,23 @@ const ScoreboardCard = ({
         <div className="text-[8px] lg:text-xs font-bold text-slate-400 tracking-wider lg:tracking-[0.25em] mt-0.5 lg:mt-2 whitespace-nowrap">TO {setTarget}</div>
       </div>
 
-      {/* AWAY 팀 카드 — 모바일 세로(AWAY→점→점수), 데스크톱 가로 미러(lg:order) */}
-      <div className="flex-1 flex flex-col items-center lg:flex-row lg:items-stretch bg-white rounded-xl lg:rounded-2xl border-2 border-blue-200 shadow-sm overflow-hidden min-w-0 py-2 lg:py-0">
-        {/* AWAY 라벨 — 모바일 상단, 데스크톱 우측(order-3) */}
-        <div className="flex items-center justify-center lg:px-1.5 shrink-0 lg:order-3">
-          <span className="text-[10px] font-black text-blue-400 tracking-[0.2em] lg:[writing-mode:vertical-rl]">AWAY</span>
-        </div>
-        {/* 세트 점 — 모바일만(라벨 아래) */}
-        {mobileDots('B')}
-        {/* 팀명 — 데스크톱만(order-2) */}
-        <div className="hidden lg:flex lg:flex-1 lg:flex-col justify-center items-end pr-1 pl-3 py-3 min-w-0 lg:order-2">
-          <span className="text-3xl sm:text-4xl font-black text-slate-900 truncate leading-tight">{teamB?.name}</span>
-          {desktopDots('B')}
-        </div>
-        {/* 점수 — 모바일 하단, 데스크톱 좌측(order-1) */}
-        <div className={cn('flex-1 flex items-center justify-center lg:justify-start mt-1 lg:mt-0 lg:pl-5 text-4xl lg:text-6xl font-black font-mono tabular-nums leading-none lg:order-1', servingB ? 'text-blue-500' : 'text-slate-800')}>
+      {/* AWAY 팀 카드 — 좌우 대칭: [큰 점수][세트점][AWAY 세로라벨] */}
+      <div className="flex-1 flex items-stretch bg-white rounded-xl lg:rounded-2xl border-2 border-blue-200 shadow-sm overflow-hidden min-w-0">
+        {/* 큰 점수 */}
+        <div className={cn('flex-1 lg:flex-none flex items-center justify-center lg:justify-start py-2.5 lg:py-0 px-1 lg:pl-5 text-4xl lg:text-6xl font-black font-mono tabular-nums leading-none', servingB ? 'text-blue-500' : 'text-slate-800')}>
           {currentSet.scoreB}
         </div>
-        {/* 서브 바 — 데스크톱 우측 가장자리(order-4) */}
-        <div className={cn('hidden lg:block w-1.5 self-stretch lg:order-4', servingB ? 'bg-blue-400' : 'bg-blue-100')} />
+        {/* 팀명 — 데스크톱만 */}
+        <div className="hidden lg:flex lg:flex-1 lg:items-center justify-end pr-1 pl-3 py-3 min-w-0">
+          <span className="text-3xl sm:text-4xl font-black text-slate-900 truncate leading-tight">{teamB?.name}</span>
+        </div>
+        {/* 세트 점 — 라벨 옆 */}
+        {setDots('B')}
+        {/* AWAY 세로 라벨 */}
+        <div className="flex items-center justify-center px-1 lg:px-1.5 shrink-0">
+          <span className="text-[9px] lg:text-[10px] font-black text-blue-400 tracking-[0.2em] [writing-mode:vertical-rl]">AWAY</span>
+        </div>
+        <div className={cn('w-1 lg:w-1.5 self-stretch', servingB ? 'bg-blue-400' : 'bg-blue-100')} />
       </div>
     </div>
   );
@@ -2466,7 +2448,7 @@ export default function App() {
                   </div>
                   {maxSets > 1 && (
                     <button onClick={endCurrentSet} className="flex items-center justify-center gap-1.5 w-full px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm transition-colors shadow-md">
-                      <CheckCircle2 size={16} /> {matchDecided ? '세트 종료 · 결과 →' : '세트 종료 · 다음 →'}
+                      <CheckCircle2 size={16} /> {matchDecided ? '세트 종료 · 결과 →' : `세트 종료 · ${setId + 2}세트 →`}
                     </button>
                   )}
                 </div>
@@ -2496,23 +2478,27 @@ export default function App() {
         {/* 하단 컨트롤 바 — 모바일 전용 (데스크톱은 가운데 컬럼에 표시) */}
         {!readOnly && role === 'teacher' && (
           <footer className="lg:hidden shrink-0 bg-white border-t border-slate-200 px-3 py-2.5">
-            <div className="flex items-center gap-2">
-              {/* 핵심 액션: 득점 취소 · 이전 · 다음 — 한 줄 균등 */}
-              <button onClick={undoLastScore} className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl bg-white border-2 border-orange-300 hover:bg-orange-50 text-orange-700 font-bold text-sm transition-colors">
-                <RotateCcw size={16} /> 취소
+            {/* 문서앱 툴바 스타일 — 모든 아이콘 버튼 동일 크기(11x11), 세트종료만 색+라벨로 구분 */}
+            <div className="flex items-center gap-1.5">
+              <button onClick={undoLastScore} title="득점 취소(되돌리기)" className="flex items-center justify-center w-11 h-11 rounded-xl bg-white border-2 border-orange-300 hover:bg-orange-50 text-orange-700 transition-colors">
+                <RotateCcw size={18} />
               </button>
-              <button onClick={() => rotateServer(set.servingTeam, -1)} className="flex-1 flex items-center justify-center gap-1 px-2 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors"><ChevronLeft size={16} /> 이전</button>
-              <button onClick={() => rotateServer(set.servingTeam, 1)} className="flex-1 flex items-center justify-center gap-1 px-2 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors">다음 <ChevronRight size={16} /></button>
-              {/* 보조 액션: 아이콘 버튼으로 묶음 */}
-              <button onClick={() => navigate('game-court', { setId })} className="shrink-0 p-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-500 transition-colors" title="코트 재편성 — 선수·서브 오더 다시 편성">
+              <button onClick={() => rotateServer(set.servingTeam, -1)} title="이전(로테이션)" className="flex items-center justify-center w-11 h-11 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 transition-colors">
+                <ChevronLeft size={22} />
+              </button>
+              <button onClick={() => rotateServer(set.servingTeam, 1)} title="다음(로테이션)" className="flex items-center justify-center w-11 h-11 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 transition-colors">
+                <ChevronRight size={22} />
+              </button>
+              <div className="flex-1" />
+              <button onClick={() => navigate('game-court', { setId })} title="코트 재편성 — 선수·서브 오더 다시 편성" className="flex items-center justify-center w-11 h-11 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-500 transition-colors">
                 <Users size={18} />
               </button>
-              <button onClick={() => setShowSettings(true)} className="shrink-0 p-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-500 transition-colors" title="경기 설정 — 인원수·세트수·목표점수 변경">
+              <button onClick={() => setShowSettings(true)} title="경기 설정 — 인원수·세트수·목표점수 변경" className="flex items-center justify-center w-11 h-11 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-500 transition-colors">
                 <Settings size={18} />
               </button>
               {maxSets > 1 && (
-                <button onClick={endCurrentSet} className="shrink-0 flex items-center gap-1 px-2.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition-colors shadow-md" title={matchDecided ? '세트 종료 · 결과 보기' : '세트 종료 · 다음 세트'}>
-                  <CheckCircle2 size={16} /> 세트종료
+                <button onClick={endCurrentSet} title={matchDecided ? '세트 종료 · 결과 보기' : `세트 종료 · ${setId + 2}세트로`} className="flex items-center gap-1 h-11 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm transition-colors shadow-md whitespace-nowrap">
+                  <CheckCircle2 size={16} /> {matchDecided ? '결과 →' : `${setId + 2}세트 →`}
                 </button>
               )}
             </div>
