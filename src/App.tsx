@@ -9,9 +9,10 @@ import {
   Users, 
   Settings, 
   Plus, 
-  ChevronLeft, 
-  ChevronRight, 
-  RotateCcw, 
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  RotateCcw,
   Save, 
   Trash2, 
   UserPlus, 
@@ -789,6 +790,7 @@ const CourtPlayers = ({
   const serverId = courtIds[serverIdx % Math.max(courtIds.length, 1)];
   const courtPlayers = courtIds.map(id => players.find(p => p.id === id)).filter(Boolean) as Player[];
   const benchPlayers = players.filter(p => !courtIds.includes(p.id));
+  const [benchOpen, setBenchOpen] = useState(false);
 
   // 통계 계산
   const computeStats = (s?: PlayerStats) => {
@@ -930,19 +932,28 @@ const CourtPlayers = ({
         </div>
       </div>
 
-      {/* 대기 선수 */}
+      {/* 대기 선수 — 펼치기/접기 */}
       {benchPlayers.length > 0 && (
         <div>
-          <div className={cn(
-            "text-[10px] font-black uppercase tracking-wider mb-2 px-1 flex justify-between",
-            team === 'A' ? "text-orange-700" : "text-blue-700"
-          )}>
-            <span>대기 ({benchPlayers.length}명)</span>
+          <button
+            type="button"
+            onClick={() => setBenchOpen(o => !o)}
+            className={cn(
+              "w-full flex items-center justify-between text-[10px] font-black uppercase tracking-wider mb-2 px-1 py-1.5 rounded-lg hover:bg-slate-100 transition-colors",
+              team === 'A' ? "text-orange-700" : "text-blue-700"
+            )}
+          >
+            <span className="flex items-center gap-1">
+              {benchOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              대기 명단 {benchOpen ? '접기' : '펼치기'} ({benchPlayers.length}명)
+            </span>
             <span className="text-slate-500 font-normal normal-case tracking-normal">탭=교체</span>
-          </div>
-          <div className="space-y-1.5">
-            {benchPlayers.map(p => renderRow(p, false))}
-          </div>
+          </button>
+          {benchOpen && (
+            <div className="space-y-1.5">
+              {benchPlayers.map(p => renderRow(p, false))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -951,12 +962,12 @@ const CourtPlayers = ({
 
 // ── Modal: pick action category ───────────────────────────────────────
 const CATEGORY_LABELS: Record<ActionCategory, { label: string; color: string }> = {
-  serve:   { label: '서브',     color: 'bg-blue-600' },
-  attack:  { label: '스파이크', color: 'bg-red-600' },
-  defense: { label: '수비',     color: 'bg-teal-600' },
-  setter:  { label: '토스',     color: 'bg-purple-600' },
-  block:   { label: '블로킹',   color: 'bg-amber-600' },
-  error:   { label: '실책',     color: 'bg-pink-600' },
+  serve:   { label: '서브',     color: 'bg-blue-500/10 border-blue-400/40 text-blue-300' },
+  attack:  { label: '스파이크', color: 'bg-rose-500/10 border-rose-400/40 text-rose-300' },
+  defense: { label: '수비',     color: 'bg-teal-500/10 border-teal-400/40 text-teal-300' },
+  setter:  { label: '토스',     color: 'bg-violet-500/10 border-violet-400/40 text-violet-300' },
+  block:   { label: '블로킹',   color: 'bg-amber-500/10 border-amber-400/40 text-amber-300' },
+  error:   { label: '실책',     color: 'bg-pink-500/10 border-pink-400/40 text-pink-300' },
 };
 
 const CategoryPicker = ({
@@ -976,7 +987,7 @@ const CategoryPicker = ({
           key={c}
           onClick={() => onPick(c)}
           className={cn(
-            "py-4 rounded-xl font-black text-sm text-white active:scale-95 transition-all",
+            "py-4 rounded-xl font-black text-sm border active:scale-95 transition-all",
             CATEGORY_LABELS[c].color
           )}
         >
@@ -1012,16 +1023,19 @@ const OutcomePicker = ({
       <div className="text-sm font-black text-white mb-3">{playerLabel} · {CATEGORY_LABELS[category].label}</div>
       <div className="space-y-2">
         {outcomes.map(o => {
-          const colorClass = 
-            o.scoringTeam === 'self'  ? 'bg-emerald-600 hover:bg-emerald-700' :
-            o.scoringTeam === 'other' ? 'bg-red-600 hover:bg-red-700' :
-            'bg-slate-700 hover:bg-slate-600';
+          // Outline style (옅은 배경 + 컬러 외곽선 + 컬러 글자). 스파이크 상대블록은
+          // 실책과 구분되도록 별도 색(주황)으로, 나머지 실점 결과는 빨강 계열.
+          const colorClass =
+            o.scoringTeam === 'self'    ? 'bg-emerald-500/10 border-emerald-400/40 text-emerald-300' :
+            o.key === 'spikeBlocked'    ? 'bg-orange-500/10 border-orange-400/40 text-orange-300' :
+            o.scoringTeam === 'other'   ? 'bg-rose-500/10 border-rose-400/40 text-rose-300' :
+            'bg-slate-500/10 border-slate-400/40 text-slate-300';
           return (
             <button
               key={o.key}
               onClick={() => onPick(o.key)}
               className={cn(
-                "w-full py-4 rounded-xl font-black text-sm text-white active:scale-95 transition-all",
+                "w-full py-4 rounded-xl font-black text-sm border active:scale-95 transition-all",
                 colorClass
               )}
             >
@@ -2186,6 +2200,53 @@ export default function App() {
       showToast('기록됨');
     };
 
+    // ── 세트 종료 / 다음 세트 (3전2선승·5전3선승 지원) ──────────────────
+    const maxSets = game.maxSets ?? 1;
+    const setsToWin = Math.ceil(maxSets / 2);
+    // 현재 세트까지의 (잠정) 세트 승수 — 현재 세트의 라이브 점수 반영
+    const setWinsA = game.sets.slice(0, setId + 1).filter(s => s.scoreA > s.scoreB).length;
+    const setWinsB = game.sets.slice(0, setId + 1).filter(s => s.scoreB > s.scoreA).length;
+    const matchDecided =
+      setWinsA >= setsToWin || setWinsB >= setsToWin || setId + 1 >= maxSets;
+
+    const endCurrentSet = () => {
+      const cur = game.sets[setId];
+      if (cur.scoreA === cur.scoreB) {
+        showToast('세트가 동점입니다 — 승부를 낸 뒤 종료하세요');
+        return;
+      }
+      if (matchDecided) {
+        // 경기 결과(대시보드)로 — 거기서 "저장 후 종료"
+        navigate('dashboard', { gameId: game.id });
+        return;
+      }
+      // 다음 세트 생성: 직전 세트의 코트 라인업을 그대로 이어감 (교체로 조정 가능)
+      const nextIdx = setId + 1;
+      const prevSet = game.sets[setId];
+      const nextSet: GameSet = {
+        number: nextIdx + 1,
+        scoreA: 0,
+        scoreB: 0,
+        courtA: [...prevSet.courtA],
+        courtB: [...prevSet.courtB],
+        serverIdxA: 0,
+        serverIdxB: 0,
+        servingTeam: 'A',
+        playerStats: {},
+        scoreEvents: [],
+      };
+      setData(prev => ({
+        ...prev,
+        games: prev.games.map(g =>
+          g.id === game.id
+            ? { ...g, sets: [...g.sets.slice(0, nextIdx), nextSet] }
+            : g
+        ),
+      }));
+      navigate('game-record', { setId: nextIdx });
+      showToast(`${nextIdx + 1}세트 시작`);
+    };
+
     // Build cumulative score tower data (each scoring event lights a number box)
     // Tower 1: 1-10, Tower 2: 11-20, Tower 3: 21-30
     const buildScoreSequence = (team: 'A' | 'B'): number[] => {
@@ -2211,14 +2272,24 @@ export default function App() {
             <div className="text-sm font-black text-slate-600 uppercase tracking-wider bg-slate-100 px-3 py-1.5 rounded-lg">SET {setId + 1}</div>
             <div className="text-sm font-black text-orange-600 uppercase tracking-wider bg-orange-50 px-3 py-1.5 rounded-lg">{game.format}</div>
           </div>
-          <button
-            onClick={() => navigate('dashboard', { gameId: game.id })}
-            disabled={readOnly}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-base font-black transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Save size={18} />
-            경기 종료
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('dashboard', { gameId: game.id })}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-base font-bold transition-colors border border-slate-200"
+              title="현재까지 기록·통계 보기"
+            >
+              <History size={18} />
+              기록
+            </button>
+            <button
+              onClick={() => navigate('dashboard', { gameId: game.id })}
+              disabled={readOnly}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-base font-black transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Save size={18} />
+              경기 종료
+            </button>
+          </div>
         </header>
 
         {/* Main wide layout: 상단 스코어보드 + 하단 3열 */}
@@ -2261,6 +2332,15 @@ export default function App() {
               {/* Quick controls — 하단 고정 */}
               {!readOnly && role === 'teacher' && (
                 <div className="flex flex-col gap-2 w-full flex-shrink-0">
+                  {maxSets > 1 && (
+                    <button
+                      onClick={endCurrentSet}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-base transition-colors shadow-md"
+                    >
+                      <CheckCircle2 size={18} />
+                      {matchDecided ? '세트 종료 · 경기 결과 →' : '세트 종료 · 다음 세트 →'}
+                    </button>
+                  )}
                   <button
                     onClick={undoLastScore}
                     className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white border-2 border-orange-300 hover:bg-orange-50 text-orange-700 font-bold text-base transition-colors"
@@ -2425,29 +2505,50 @@ export default function App() {
         </header>
 
         <main className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
-          <Card className="bg-slate-900/80">
-            <div className="text-center space-y-4">
-              <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{game.date}</div>
-              <div className="flex items-center justify-center gap-8">
-                <div className="text-center">
-                  <div className="text-sm font-bold text-slate-400 mb-1">{teamA?.name}</div>
-                  <div className="text-4xl font-black text-orange-500">{game.sets[0].scoreA}</div>
+          {(() => {
+            const isMulti = (game.maxSets ?? 1) > 1;
+            const setWinsA = game.sets.filter(s => s.scoreA > s.scoreB).length;
+            const setWinsB = game.sets.filter(s => s.scoreB > s.scoreA).length;
+            return (
+              <Card className="bg-slate-900/80">
+                <div className="text-center space-y-4">
+                  <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{game.date}</div>
+                  <div className="flex items-center justify-center gap-8">
+                    <div className="text-center">
+                      <div className="text-sm font-bold text-slate-400 mb-1">{teamA?.name}</div>
+                      <div className="text-4xl font-black text-orange-500">{isMulti ? setWinsA : game.sets[0].scoreA}</div>
+                    </div>
+                    <div className="text-2xl font-black text-slate-800 italic">VS</div>
+                    <div className="text-center">
+                      <div className="text-sm font-bold text-slate-400 mb-1">{teamB?.name}</div>
+                      <div className="text-4xl font-black text-blue-500">{isMulti ? setWinsB : game.sets[0].scoreB}</div>
+                    </div>
+                  </div>
+                  {isMulti && (
+                    <div className="flex justify-center gap-4 pt-1">
+                      {game.sets.map((s, i) => (
+                        <div key={i} className="text-center">
+                          <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">SET {i + 1}</div>
+                          <div className="text-sm font-mono font-bold">
+                            <span className={s.scoreA > s.scoreB ? "text-orange-400" : "text-slate-500"}>{s.scoreA}</span>
+                            <span className="text-slate-600 mx-1">:</span>
+                            <span className={s.scoreB > s.scoreA ? "text-blue-400" : "text-slate-500"}>{s.scoreB}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="text-2xl font-black text-slate-800 italic">VS</div>
-                <div className="text-center">
-                  <div className="text-sm font-bold text-slate-400 mb-1">{teamB?.name}</div>
-                  <div className="text-4xl font-black text-blue-500">{game.sets[0].scoreB}</div>
-                </div>
-              </div>
-            </div>
-          </Card>
+              </Card>
+            );
+          })()}
 
           <section className="space-y-4">
-            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">선수별 통계 (1세트)</h2>
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">선수별 통계 {(game.maxSets ?? 1) > 1 ? '(전체 세트)' : '(1세트)'}</h2>
             <div className="space-y-2">
               {[...(teamA?.players ?? []), ...(teamB?.players ?? [])].map(p => {
-                const stats = game.sets[0].playerStats[p.id];
-                if (!stats) return null;
+                const stats = aggregatePlayerStatsInGame(game, p.id);
+                if (!Object.values(stats).some(v => v > 0)) return null;
                 const rates = deriveRates(stats);
                 const team = (teamA?.players ?? []).includes(p) ? 'A' : 'B';
                 return (
