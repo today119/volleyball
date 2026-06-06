@@ -408,8 +408,15 @@ const ScoreboardCard = ({
         <div className="flex items-center px-1.5">
           <span className="text-[10px] font-black text-orange-400 tracking-[0.2em] [writing-mode:vertical-rl] rotate-180">HOME</span>
         </div>
-        <div className="flex-1 flex items-center pl-1 pr-3 py-4 min-w-0">
-          <span className="text-3xl sm:text-4xl font-black text-slate-900 truncate">{teamA?.name}</span>
+        <div className="flex-1 flex flex-col justify-center pl-1 pr-3 py-3 min-w-0">
+          <span className="text-3xl sm:text-4xl font-black text-slate-900 truncate leading-tight">{teamA?.name}</span>
+          {maxSets > 1 && (
+            <div className="flex gap-1 mt-1.5" title={`세트 ${setWinsA} / ${maxSets}`}>
+              {Array.from({ length: maxSets }, (_, i) => (
+                <div key={'sa' + i} className={cn('w-2.5 h-2.5 rounded-full', i < setWinsA ? 'bg-orange-500' : 'bg-orange-100 border border-orange-200')} />
+              ))}
+            </div>
+          )}
         </div>
         <div className={cn('flex items-center pr-5 text-6xl font-black font-mono tabular-nums leading-none', servingA ? 'text-orange-500' : 'text-slate-800')}>
           {currentSet.scoreA}
@@ -420,13 +427,7 @@ const ScoreboardCard = ({
       <div className="flex flex-col items-center justify-center self-stretch bg-slate-50 rounded-2xl border border-slate-200 shadow-sm px-4 min-w-[96px] lg:w-[300px] lg:px-0 shrink-0">
         <div className="text-3xl sm:text-4xl font-black text-slate-800 tracking-wide leading-none">SET {currentSet.number}</div>
         <div className="text-xs font-bold text-slate-400 tracking-[0.25em] mt-2">TO {setTarget}</div>
-        {maxSets > 1 && (
-          <div className="flex items-center gap-2 mt-3">
-            <div className="flex gap-1">{Array.from({ length: maxSets }, (_, i) => (<div key={'a' + i} className={cn('w-2 h-2 rounded-full', i < setWinsA ? 'bg-orange-500' : 'bg-slate-200')} />))}</div>
-            <span className="text-[9px] font-bold text-slate-300">:</span>
-            <div className="flex gap-1">{Array.from({ length: maxSets }, (_, i) => (<div key={'b' + i} className={cn('w-2 h-2 rounded-full', i < setWinsB ? 'bg-blue-500' : 'bg-slate-200')} />))}</div>
-          </div>
-        )}
+        {/* 세트 점수(딴 세트 수) 동그라미는 각 팀 박스로 이동 — 가운데는 중복 제거 */}
       </div>
 
       {/* AWAY 팀 카드 — 오른쪽 팀 컬럼 폭(flex-1)에 정렬 */}
@@ -434,8 +435,15 @@ const ScoreboardCard = ({
         <div className={cn('flex items-center pl-5 text-6xl font-black font-mono tabular-nums leading-none', servingB ? 'text-blue-500' : 'text-slate-800')}>
           {currentSet.scoreB}
         </div>
-        <div className="flex-1 flex items-center justify-end pr-1 pl-3 py-4 min-w-0">
-          <span className="text-3xl sm:text-4xl font-black text-slate-900 truncate">{teamB?.name}</span>
+        <div className="flex-1 flex flex-col justify-center items-end pr-1 pl-3 py-3 min-w-0">
+          <span className="text-3xl sm:text-4xl font-black text-slate-900 truncate leading-tight">{teamB?.name}</span>
+          {maxSets > 1 && (
+            <div className="flex gap-1 mt-1.5" title={`세트 ${setWinsB} / ${maxSets}`}>
+              {Array.from({ length: maxSets }, (_, i) => (
+                <div key={'sb' + i} className={cn('w-2.5 h-2.5 rounded-full', i < setWinsB ? 'bg-blue-500' : 'bg-blue-100 border border-blue-200')} />
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex items-center px-1.5">
           <span className="text-[10px] font-black text-blue-400 tracking-[0.2em] [writing-mode:vertical-rl]">AWAY</span>
