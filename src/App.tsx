@@ -134,10 +134,10 @@ const createNewSet = (number: number): GameSet => ({
 
 const Card = ({ children, className, title, onClick }: { children: React.ReactNode, className?: string, title?: string, onClick?: () => void, key?: React.Key }) => (
   <div 
-    className={cn("bg-white border border-slate-200 rounded-2xl p-4 overflow-hidden shadow-sm", className)}
+    className={cn("bg-white border border-slate-200 rounded-xl lg:rounded-2xl p-5 lg:p-4 overflow-hidden shadow-sm", className)}
     onClick={onClick}
   >
-    {title && <h3 className="text-sm font-bold text-slate-600 uppercase tracking-wider mb-3">{title}</h3>}
+    {title && <h3 className="text-base lg:text-sm font-bold text-slate-600 uppercase tracking-wider mb-3">{title}</h3>}
     {children}
   </div>
 );
@@ -1757,14 +1757,14 @@ export default function App() {
                 onChange={e => setPIsSetter(e.target.checked)}
                 className="w-4 h-4 accent-purple-600"
               />
-              <span className="text-xs font-bold text-slate-400">세터 (S)</span>
+              <span className="text-sm lg:text-xs font-bold text-slate-400">세터 (S)</span>
             </label>
             <Button variant="primary" className="w-full" onClick={addPlayer} icon={UserPlus}>선수 등록</Button>
           </Card>
 
           <Card title="📊 구글 시트로 명단 관리">
             <div className="space-y-3">
-              <div className="text-sm text-slate-600 bg-emerald-50 border border-emerald-200 p-4 rounded-lg leading-relaxed">
+              <div className="text-base lg:text-sm text-slate-600 bg-emerald-50 border border-emerald-200 p-4 rounded-xl lg:rounded-lg leading-relaxed">
                 매치매이커 방식 — 구글 시트에서 직접 명단을 편집/관리합니다.
                 <br/>설정 → "GAS Web App URL" 등록 필요.
               </div>
@@ -1846,7 +1846,7 @@ export default function App() {
 
           <Card title="📥 CSV로 일괄 등록 (오프라인용)">
             <div className="space-y-3">
-              <div className="text-sm text-slate-600 bg-slate-100 p-4 rounded-lg leading-relaxed">
+              <div className="text-base lg:text-sm text-slate-600 bg-slate-100 p-4 rounded-xl lg:rounded-lg leading-relaxed">
                 인터넷이 안 될 때 CSV 파일로 명단을 추가할 수 있습니다.
                 <br/>컬럼: <span className="font-mono text-slate-700">이름, 번호, 학년반, 세터(Y/N)</span>
               </div>
@@ -1858,7 +1858,7 @@ export default function App() {
                   onChange={e => setReplaceMode(e.target.checked)}
                   className="w-4 h-4 accent-red-600"
                 />
-                <span className="text-xs font-bold text-slate-400">
+                <span className="text-sm lg:text-xs font-bold text-slate-400">
                   기존 명단 삭제 후 새로 등록
                 </span>
               </label>
@@ -1889,29 +1889,29 @@ export default function App() {
           </Card>
 
           <div className="space-y-3">
-            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">선수 명단 ({(team.players?.length ?? 0)}명)</h2>
+            <h2 className="text-base lg:text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">선수 명단 ({(team.players?.length ?? 0)}명)</h2>
             {(team.players?.length ?? 0) === 0 ? (
-              <div className="text-center py-8 text-slate-600 text-sm italic">등록된 선수가 없습니다.</div>
+              <div className="text-center py-8 text-slate-600 text-base lg:text-sm italic">등록된 선수가 없습니다.</div>
             ) : (
               (team.players ?? []).map(player => (
-                <div key={player.id} className="flex items-center justify-between bg-white border border-slate-200 p-3 rounded-2xl group hover:border-slate-300 transition-colors">
+                <div key={player.id} className="flex items-center justify-between bg-white border border-slate-200 p-4 lg:p-3 rounded-xl lg:rounded-2xl group hover:border-slate-300 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center font-bold text-orange-600 relative">
                       {player.number}
                       {player.isSetter && (
-                        <div className="absolute -top-1 -right-1 text-[8px] font-black bg-purple-600 text-white px-1 rounded">S</div>
+                        <div className="absolute -top-1 -right-1 text-[10px] lg:text-[8px] font-black bg-purple-600 text-white px-1 rounded">S</div>
                       )}
                     </div>
                     <div>
-                      <div className="font-black text-slate-900">{player.name}</div>
-                      <div className="text-[10px] text-slate-500 font-medium">{player.org || '소속 없음'}</div>
+                      <div className="font-black text-lg lg:text-base text-slate-900">{player.name}</div>
+                      <div className="text-sm lg:text-[10px] text-slate-500 font-medium">{player.org || '소속 없음'}</div>
                     </div>
                   </div>
                   <div className="flex gap-1 items-center">
                     <button 
                       onClick={() => toggleSetter(player.id)}
                       className={cn(
-                        "text-[10px] font-bold px-2.5 py-1 rounded-md border transition-all",
+                        "text-xs lg:text-[10px] font-bold px-2.5 py-1.5 lg:py-1 rounded-md border transition-all",
                         player.isSetter 
                           ? "bg-purple-100 border-purple-400 text-purple-700"
                           : "bg-transparent border-transparent text-slate-300 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-500"
@@ -1982,24 +1982,24 @@ export default function App() {
             <Card title="팀 선택">
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 ml-1">TEAM A (홈)</label>
+                  <label className="text-sm lg:text-xs font-bold text-slate-500 ml-1">TEAM A (홈)</label>
                   <select 
                     value={tA} 
                     onChange={e => setTA(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-base lg:text-sm text-white focus:outline-none"
                   >
                     {data.teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                 </div>
                 <div className="flex justify-center">
-                  <div className="text-xs font-black text-slate-700 italic">VS</div>
+                  <div className="text-sm lg:text-xs font-black text-slate-700 italic">VS</div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 ml-1">TEAM B (어웨이)</label>
+                  <label className="text-sm lg:text-xs font-bold text-slate-500 ml-1">TEAM B (어웨이)</label>
                   <select 
                     value={tB} 
                     onChange={e => setTB(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-base lg:text-sm text-white focus:outline-none"
                   >
                     {data.teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
@@ -2010,14 +2010,14 @@ export default function App() {
             <Card title="규칙 설정">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 ml-1">인원수</label>
+                  <label className="text-sm lg:text-xs font-bold text-slate-500 ml-1">인원수</label>
                   <div className="flex gap-2">
                     {[6, 9].map(n => (
                       <button 
                         key={n}
                         onClick={() => setCourtN(n)}
                         className={cn(
-                          "flex-1 py-2.5 rounded-xl text-sm font-bold transition-all",
+                          "flex-1 py-3 lg:py-2.5 rounded-xl text-base lg:text-sm font-bold transition-all",
                           courtN === n ? "bg-orange-600 text-white" : "bg-slate-800 text-slate-400"
                         )}
                       >
@@ -2027,11 +2027,11 @@ export default function App() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 ml-1">목표 점수</label>
+                  <label className="text-sm lg:text-xs font-bold text-slate-500 ml-1">목표 점수</label>
                   <select 
                     value={target} 
                     onChange={e => setTarget(Number(e.target.value))}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-base lg:text-sm text-white focus:outline-none"
                   >
                     {[15, 21, 25].map(n => <option key={n} value={n}>{n}점</option>)}
                   </select>
@@ -2040,7 +2040,7 @@ export default function App() {
 
               {/* 경기 방식 */}
               <div className="mt-4 space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 ml-1">경기 방식</label>
+                <label className="text-sm lg:text-xs font-bold text-slate-500 ml-1">경기 방식</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { val: 1, label: '단판', desc: '1세트' },
@@ -2051,14 +2051,14 @@ export default function App() {
                       key={opt.val}
                       onClick={() => setMaxSets(opt.val)}
                       className={cn(
-                        "py-2.5 rounded-xl text-sm font-bold transition-all border",
-                        maxSets === opt.val 
+                        "py-3 lg:py-2.5 rounded-xl text-base lg:text-sm font-bold transition-all border",
+                        maxSets === opt.val
                           ? "bg-orange-600 text-white border-orange-600" 
                           : "bg-white text-slate-600 border-slate-300 hover:border-orange-300"
                       )}
                     >
                       <div>{opt.label}</div>
-                      <div className="text-[9px] font-normal opacity-80 mt-0.5">{opt.desc}</div>
+                      <div className="text-[11px] lg:text-[9px] font-normal opacity-80 mt-0.5">{opt.desc}</div>
                     </button>
                   ))}
                 </div>
@@ -2634,15 +2634,15 @@ export default function App() {
             return (
               <Card className="bg-slate-900/80">
                 <div className="text-center space-y-4">
-                  <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{game.date}</div>
+                  <div className="text-xs lg:text-[10px] font-black text-slate-500 uppercase tracking-widest">{game.date}</div>
                   <div className="flex items-center justify-center gap-8">
                     <div className="text-center">
-                      <div className="text-sm font-bold text-slate-400 mb-1">{teamA?.name}</div>
+                      <div className="text-base lg:text-sm font-bold text-slate-400 mb-1">{teamA?.name}</div>
                       <div className="text-4xl font-black text-orange-500">{isMulti ? setWinsA : game.sets[0].scoreA}</div>
                     </div>
                     <div className="text-2xl font-black text-slate-800 italic">VS</div>
                     <div className="text-center">
-                      <div className="text-sm font-bold text-slate-400 mb-1">{teamB?.name}</div>
+                      <div className="text-base lg:text-sm font-bold text-slate-400 mb-1">{teamB?.name}</div>
                       <div className="text-4xl font-black text-blue-500">{isMulti ? setWinsB : game.sets[0].scoreB}</div>
                     </div>
                   </div>
@@ -2650,8 +2650,8 @@ export default function App() {
                     <div className="flex justify-center gap-4 pt-1">
                       {game.sets.map((s, i) => (
                         <div key={i} className="text-center">
-                          <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">SET {i + 1}</div>
-                          <div className="text-sm font-mono font-bold">
+                          <div className="text-xs lg:text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">SET {i + 1}</div>
+                          <div className="text-base lg:text-sm font-mono font-bold">
                             <span className={s.scoreA > s.scoreB ? "text-orange-400" : "text-slate-500"}>{s.scoreA}</span>
                             <span className="text-slate-600 mx-1">:</span>
                             <span className={s.scoreB > s.scoreA ? "text-blue-400" : "text-slate-500"}>{s.scoreB}</span>
@@ -2666,7 +2666,7 @@ export default function App() {
           })()}
 
           <section className="space-y-4">
-            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">선수별 통계 {(game.maxSets ?? 1) > 1 ? '(전체 세트)' : '(1세트)'}</h2>
+            <h2 className="text-base lg:text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">선수별 통계 {(game.maxSets ?? 1) > 1 ? '(전체 세트)' : '(1세트)'}</h2>
             <div className="space-y-2">
               {[...(teamA?.players ?? []), ...(teamB?.players ?? [])].map(p => {
                 const stats = aggregatePlayerStatsInGame(game, p.id);
@@ -2674,17 +2674,17 @@ export default function App() {
                 const rates = deriveRates(stats);
                 const team = (teamA?.players ?? []).includes(p) ? 'A' : 'B';
                 return (
-                  <div key={p.id} className="bg-slate-900/30 p-3 rounded-xl border border-slate-800/50">
+                  <div key={p.id} className="bg-slate-900/30 p-4 lg:p-3 rounded-xl border border-slate-800/50">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <div className={cn(
                           "w-2 h-2 rounded-full",
                           team === 'A' ? "bg-orange-500" : "bg-blue-500"
                         )} />
-                        <span className="text-xs font-bold text-slate-300">{p.number} {p.name}</span>
+                        <span className="text-sm lg:text-xs font-bold text-slate-300">{p.number} {p.name}</span>
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-[10px]">
+                    <div className="grid grid-cols-3 gap-2 text-xs lg:text-[10px]">
                       <StatPill label="서브" value={`${(stats.serveAce + stats.serveOk)}/${rates.serveTotal}`} pct={rates.servePct} />
                       <StatPill label="공격" value={`${stats.spikeSuccess}/${rates.spikeTotal}`} pct={rates.spikePct} />
                       <StatPill label="토스" value={`${stats.setSuccess + stats.setAssist}/${rates.setTotal}`} pct={rates.setEffective} />
@@ -2762,7 +2762,7 @@ export default function App() {
           <Card title={`참가 팀 선택 (${selectedTeamIds.length}/${data.teams.length})`}>
             <div className="space-y-2">
               {data.teams.length === 0 ? (
-                <p className="text-xs text-slate-500 text-center py-4">등록된 팀이 없습니다</p>
+                <p className="text-sm lg:text-xs text-slate-500 text-center py-4">등록된 팀이 없습니다</p>
               ) : (
                 data.teams.map(t => {
                   const selected = selectedTeamIds.includes(t.id);
@@ -2771,7 +2771,7 @@ export default function App() {
                       key={t.id}
                       onClick={() => toggleTeam(t.id)}
                       className={cn(
-                        "w-full flex items-center gap-3 p-3 rounded-xl border transition-all",
+                        "w-full flex items-center gap-3 p-4 lg:p-3 rounded-xl border transition-all",
                         selected
                           ? "bg-orange-600/10 border-orange-600 text-orange-50"
                           : "bg-slate-900/40 border-slate-800 text-slate-300 hover:border-slate-700"
@@ -2784,8 +2784,8 @@ export default function App() {
                         {selected && <span className="text-white text-xs font-bold">✓</span>}
                       </div>
                       <div className="flex-1 text-left min-w-0">
-                        <div className="font-bold truncate">{t.name}</div>
-                        <div className="text-[10px] text-slate-500">{(t.players?.length ?? 0)}명</div>
+                        <div className="font-bold text-lg lg:text-base truncate">{t.name}</div>
+                        <div className="text-sm lg:text-[10px] text-slate-500">{(t.players?.length ?? 0)}명</div>
                       </div>
                     </button>
                   );
@@ -2801,7 +2801,7 @@ export default function App() {
                   key={r}
                   onClick={() => setRounds(r)}
                   className={cn(
-                    "flex-1 py-3 rounded-xl text-sm font-bold transition-all",
+                    "flex-1 py-3.5 lg:py-3 rounded-xl text-base lg:text-sm font-bold transition-all",
                     rounds === r ? "bg-orange-600 text-white" : "bg-slate-800 text-slate-400"
                   )}
                 >
@@ -2809,7 +2809,7 @@ export default function App() {
                 </button>
               ))}
             </div>
-            <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
+            <p className="text-sm lg:text-[10px] text-slate-500 mt-2 leading-relaxed">
               풀리그: 모든 팀이 한 번씩 대결.<br/>
               2바퀴 = 모든 팀과 두 번씩 (홈/어웨이 개념).<br/>
               진행 중에도 라운드를 더 추가할 수 있습니다.
@@ -2819,9 +2819,9 @@ export default function App() {
           {previewMatches > 0 && (
             <Card>
               <div className="text-center">
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">예상 경기 수</div>
+                <div className="text-xs lg:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">예상 경기 수</div>
                 <div className="text-3xl font-black text-orange-500 font-mono">{previewMatches}</div>
-                <div className="text-[10px] text-slate-500 mt-1">
+                <div className="text-sm lg:text-[10px] text-slate-500 mt-1">
                   {selectedTeamIds.length}팀 × {rounds}바퀴
                 </div>
               </div>
@@ -2943,8 +2943,8 @@ export default function App() {
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <Button variant="ghost" size="sm" onClick={() => navigate('home')} icon={ChevronLeft} />
             <div className="min-w-0">
-              <h1 className="text-lg font-black tracking-tight truncate">{event.name}</h1>
-              <div className="text-[10px] text-slate-500">
+              <h1 className="text-xl lg:text-lg font-black tracking-tight truncate">{event.name}</h1>
+              <div className="text-sm lg:text-[10px] text-slate-500">
                 {event.teamIds.length}팀 · {event.rounds}라운드 · {progress.finished}/{progress.total} 완료
               </div>
             </div>
@@ -2961,7 +2961,7 @@ export default function App() {
               key={t}
               onClick={() => setTab(t)}
               className={cn(
-                "flex-1 py-3 text-xs font-black uppercase tracking-widest transition-colors",
+                "flex-1 py-3.5 lg:py-3 text-base lg:text-xs font-black uppercase tracking-widest transition-colors",
                 tab === t 
                   ? "text-orange-500 border-b-2 border-orange-500" 
                   : "text-slate-600 hover:text-slate-400"
@@ -2975,18 +2975,18 @@ export default function App() {
         <main className="flex-1 overflow-y-auto p-6 min-h-0">
           {tab === 'standings' && (
             <div className="space-y-3">
-              <div className="overflow-x-auto bg-slate-900/30 rounded-2xl border border-slate-800">
-                <table className="w-full text-xs">
+              <div className="overflow-x-auto bg-slate-900/30 rounded-xl lg:rounded-2xl border border-slate-800">
+                <table className="w-full text-sm lg:text-xs">
                   <thead>
                     <tr className="border-b border-slate-800 text-slate-500">
-                      <th className="text-left p-3 font-bold">순위</th>
-                      <th className="text-left p-3 font-bold">팀</th>
-                      <th className="text-right p-3 font-bold">경기</th>
-                      <th className="text-right p-3 font-bold">승</th>
-                      <th className="text-right p-3 font-bold">패</th>
-                      <th className="text-right p-3 font-bold">세트</th>
-                      <th className="text-right p-3 font-bold">득실</th>
-                      <th className="text-right p-3 font-bold text-orange-500">승점</th>
+                      <th className="text-left px-2.5 py-2.5 lg:p-3 font-bold">순위</th>
+                      <th className="text-left px-2.5 py-2.5 lg:p-3 font-bold">팀</th>
+                      <th className="text-right px-2.5 py-2.5 lg:p-3 font-bold">경기</th>
+                      <th className="text-right px-2.5 py-2.5 lg:p-3 font-bold">승</th>
+                      <th className="text-right px-2.5 py-2.5 lg:p-3 font-bold">패</th>
+                      <th className="text-right px-2.5 py-2.5 lg:p-3 font-bold">세트</th>
+                      <th className="text-right px-2.5 py-2.5 lg:p-3 font-bold">득실</th>
+                      <th className="text-right px-2.5 py-2.5 lg:p-3 font-bold text-orange-500">승점</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2995,31 +2995,31 @@ export default function App() {
                         "border-b border-slate-800/50",
                         idx === 0 && "bg-orange-600/5"
                       )}>
-                        <td className="p-3 font-black">
+                        <td className="px-2.5 py-2.5 lg:p-3 font-black">
                           <span className={cn(
-                            "inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px]",
+                            "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs lg:text-[10px]",
                             idx === 0 ? "bg-yellow-500 text-slate-900" :
                             idx === 1 ? "bg-slate-400 text-slate-900" :
                             idx === 2 ? "bg-orange-700 text-white" :
                             "bg-slate-800 text-slate-400"
                           )}>{idx + 1}</span>
                         </td>
-                        <td className="p-3 font-bold text-slate-100">{teamName(row.teamId)}</td>
-                        <td className="p-3 text-right font-mono text-slate-400">{row.played}</td>
-                        <td className="p-3 text-right font-mono text-emerald-400">{row.wins}</td>
-                        <td className="p-3 text-right font-mono text-red-400">{row.losses}</td>
-                        <td className="p-3 text-right font-mono text-slate-400">{row.setsWon}-{row.setsLost}</td>
-                        <td className="p-3 text-right font-mono text-slate-400">
+                        <td className="px-2.5 py-2.5 lg:p-3 font-bold text-slate-100">{teamName(row.teamId)}</td>
+                        <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-400">{row.played}</td>
+                        <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-emerald-400">{row.wins}</td>
+                        <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-red-400">{row.losses}</td>
+                        <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-400">{row.setsWon}-{row.setsLost}</td>
+                        <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-400">
                           {row.setDiff > 0 ? `+${row.setDiff}` : row.setDiff}
                         </td>
-                        <td className="p-3 text-right font-black text-orange-500 text-base">{row.points}</td>
+                        <td className="px-2.5 py-2.5 lg:p-3 text-right font-black text-orange-500 text-lg lg:text-base">{row.points}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
 
-              <div className="text-[10px] text-slate-500 leading-relaxed bg-slate-900/30 p-3 rounded-lg">
+              <div className="text-sm lg:text-[10px] text-slate-500 leading-relaxed bg-slate-900/30 p-4 lg:p-3 rounded-xl lg:rounded-lg">
                 * 승점: 승 = 3점, 패 = 0점 (무승부 없음)<br/>
                 * 동률 시: 세트 득실 → 세트 승수 → 득점 차
               </div>
@@ -3033,8 +3033,8 @@ export default function App() {
                 .sort((a, b) => a - b)
                 .map(round => (
                   <div key={round} className="space-y-2">
-                    <div className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                      <span className="inline-block w-6 h-6 rounded-full bg-orange-600/20 text-orange-500 text-[10px] flex items-center justify-center">
+                    <div className="text-base lg:text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                      <span className="inline-block w-6 h-6 rounded-full bg-orange-600/20 text-orange-500 text-xs lg:text-[10px] flex items-center justify-center">
                         {round}
                       </span>
                       라운드 {round}
@@ -3047,7 +3047,7 @@ export default function App() {
                           onClick={() => startOrResumeMatch(match)}
                           disabled={readOnly}
                           className={cn(
-                            "w-full p-3 rounded-xl border text-left transition-all hover:bg-slate-900",
+                            "w-full p-4 lg:p-3 rounded-xl border text-left transition-all hover:bg-slate-900",
                             result.status === 'finished' && "bg-slate-900/40 border-slate-800",
                             result.status === 'inProgress' && "bg-emerald-600/5 border-emerald-600/30",
                             result.status === 'pending' && "bg-slate-900/40 border-slate-800 hover:border-orange-600/50",
@@ -3055,37 +3055,37 @@ export default function App() {
                         >
                           <div className="flex items-center gap-3">
                             <div className={cn(
-                              "flex-1 text-right font-bold",
+                              "flex-1 text-right font-bold text-lg lg:text-base",
                               result.winner === 'A' ? "text-orange-400" : "text-slate-300"
                             )}>
                               {teamName(match.teamAId)}
                             </div>
-                            <div className="text-center min-w-[60px]">
+                            <div className="text-center min-w-[64px] lg:min-w-[60px]">
                               {result.status === 'finished' ? (
-                                <div className="font-black font-mono text-sm">
+                                <div className="font-black font-mono text-lg lg:text-sm">
                                   <span className={result.winner === 'A' ? 'text-orange-400' : 'text-slate-500'}>{result.setsA}</span>
                                   <span className="text-slate-700 mx-1">:</span>
                                   <span className={result.winner === 'B' ? 'text-blue-400' : 'text-slate-500'}>{result.setsB}</span>
                                 </div>
                               ) : result.status === 'inProgress' ? (
-                                <div className="text-[9px] font-black bg-emerald-600/20 text-emerald-400 px-2 py-1 rounded">
+                                <div className="text-xs lg:text-[9px] font-black bg-emerald-600/20 text-emerald-400 px-2 py-1 rounded">
                                   LIVE
                                 </div>
                               ) : (
-                                <div className="text-[9px] font-black bg-slate-800 text-slate-500 px-2 py-1 rounded">
+                                <div className="text-xs lg:text-[9px] font-black bg-slate-800 text-slate-500 px-2 py-1 rounded">
                                   VS
                                 </div>
                               )}
                             </div>
                             <div className={cn(
-                              "flex-1 text-left font-bold",
+                              "flex-1 text-left font-bold text-lg lg:text-base",
                               result.winner === 'B' ? "text-blue-400" : "text-slate-300"
                             )}>
                               {teamName(match.teamBId)}
                             </div>
                           </div>
                           {result.status === 'finished' && (
-                            <div className="text-[9px] text-slate-600 text-center mt-1 font-mono">
+                            <div className="text-xs lg:text-[9px] text-slate-600 text-center mt-1 font-mono">
                               총 {result.pointsA} - {result.pointsB}
                             </div>
                           )}
@@ -3107,7 +3107,7 @@ export default function App() {
               대회 종료
             </Button>
           ) : (
-            <div className="flex-1 text-center py-2 text-[10px] font-bold text-slate-500">
+            <div className="flex-1 text-center py-2 text-sm lg:text-[10px] font-bold text-slate-500">
               종료됨: {new Date(event.endedAt).toLocaleDateString('ko-KR')}
             </div>
           )}
@@ -3135,7 +3135,7 @@ export default function App() {
           <div className="max-w-4xl mx-auto space-y-6 pb-6">
           <Card title="실시간 협업 / 공유">
             <div className="space-y-3">
-              <div className="text-sm text-slate-600 leading-relaxed">
+              <div className="text-base lg:text-sm text-slate-600 leading-relaxed">
                 {session.mode === 'solo' && '현재 오프라인 모드입니다. 협업 세션을 시작하면 여러 기기에서 동시에 기록할 수 있습니다.'}
                 {session.mode === 'collab' && (
                   <>현재 협업 세션 진행 중<br/><span className="font-mono text-emerald-600">{session.sessionId}</span></>
@@ -3164,7 +3164,7 @@ export default function App() {
                 onChange={e => setUrl(e.target.value)} 
                 placeholder="https://script.google.com/macros/s/..." 
               />
-              <div className="text-sm text-slate-600 leading-relaxed bg-slate-100 p-4 rounded-lg">
+              <div className="text-base lg:text-sm text-slate-600 leading-relaxed bg-slate-100 p-4 rounded-xl lg:rounded-lg">
                 <div className="font-bold text-slate-700 mb-2">GAS 설정 방법:</div>
                 1. 구글 드라이브 → 새 스프레드시트 만들기<br/>
                 2. 확장 프로그램 → Apps Script<br/>
@@ -3176,7 +3176,7 @@ export default function App() {
 
               {data.gasUrl && (
                 <div className="space-y-2 pt-2 border-t border-slate-800">
-                  <div className="text-sm font-bold text-slate-600 uppercase tracking-wider">시트 작업</div>
+                  <div className="text-base lg:text-sm font-bold text-slate-600 uppercase tracking-wider">시트 작업</div>
                   <Button
                     variant="secondary"
                     size="sm"
@@ -3214,7 +3214,7 @@ export default function App() {
           </Card>
 
           <Card title="데이터 관리" className="border-red-200 bg-red-50">
-            <p className="text-sm text-slate-600 mb-4">모든 데이터를 초기화하고 처음 상태로 되돌립니다.</p>
+            <p className="text-base lg:text-sm text-slate-600 mb-4">모든 데이터를 초기화하고 처음 상태로 되돌립니다.</p>
             <Button variant="danger" className="w-full" onClick={() => {
               if (confirm('정말 모든 데이터를 삭제하시겠습니까?')) {
                 setData(INITIAL_DATA);
