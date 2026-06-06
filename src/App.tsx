@@ -2030,6 +2030,7 @@ export default function App() {
     const teamA = data.teams.find(t => t.id === game.teamAId);
     const teamB = data.teams.find(t => t.id === game.teamBId);
     const set = game.sets[setId];
+    if (!set) return null; // 세트 인덱스가 비정상(빈 sets 등)이면 흰 화면 대신 안전 종료
 
     const togglePlayer = (team: 'A' | 'B', pid: string) => {
       const key = team === 'A' ? 'courtA' : 'courtB';
@@ -2131,6 +2132,7 @@ export default function App() {
     if (!game) return null;
 
     const set = game.sets[setId];
+    if (!set) return null; // 세트 인덱스가 비정상(빈 sets 등)이면 흰 화면 대신 안전 종료
     const teamA = data.teams.find(t => t.id === game.teamAId);
     const teamB = data.teams.find(t => t.id === game.teamBId);
 
@@ -2769,7 +2771,8 @@ export default function App() {
           if (existingGame.endedAt) {
             navigate('dashboard', { gameId: existingGame.id });
           } else {
-            navigate('game-record', { setId: existingGame.sets.length - 1 });
+            const lastIdx = Math.max(0, (existingGame.sets?.length ?? 1) - 1);
+            navigate('game-record', { setId: lastIdx });
           }
           return;
         }
