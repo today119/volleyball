@@ -203,7 +203,15 @@ export function useGameLogic({
       const idx = court.indexOf(outPlayerId);
       if (idx === -1) return;
       const newCourt = [...court]; newCourt[idx] = inPlayerId;
-      database.ref(`${setPath(currentGame.id, currentSetIdx)}/${courtKey}`).set(newCourt);
+      // 코트 교체 + 새 선수 스탯 보장(EMPTY_STATS) 을 한 번의 update로.
+      // 새로 들어온 선수의 playerStats가 없으면 통계 렌더가 undefined를 읽다 흰 화면이 날 수 있어
+      // 미리 EMPTY_STATS로 초기화한다(이미 있으면 건드리지 않음).
+      const base = `${setPath(currentGame.id, currentSetIdx)}`;
+      const updates: Record<string, any> = { [courtKey]: newCourt };
+      if (!set?.playerStats?.[inPlayerId]) {
+        updates[`playerStats/${inPlayerId}`] = { ...EMPTY_STATS };
+      }
+      database.ref(base).update(updates);
       return;
     }
     updateCurrentSet((set) => {
@@ -212,7 +220,9 @@ export function useGameLogic({
       const idx = court.indexOf(outPlayerId);
       if (idx === -1) return set;
       const newCourt = [...court]; newCourt[idx] = inPlayerId;
-      return { ...set, [courtKey]: newCourt };
+      const playerStats = { ...(set.playerStats ?? {}) };
+      if (!playerStats[inPlayerId]) playerStats[inPlayerId] = { ...EMPTY_STATS };
+      return { ...set, [courtKey]: newCourt, playerStats };
     });
   }, [updateCurrentSet, useCloud, currentGame, currentSetIdx]);
 

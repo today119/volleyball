@@ -126,10 +126,28 @@ export function useFirebaseSync({
       const remoteData = snapshot.val();
 
       if (!hasInitialized.current) {
-        // First snapshot for this session — lastUpdate 최신 우선 머지.
+        // First snapshot — "콘텐츠 풍부함" 기준 머지 (타임스탬프 단독 신뢰 금지).
+        //
+        // 과거 버그: 로컬 ts는 persistence effect가 마운트마다 Date.now()로 갱신해
+        // 항상 "최신"이 됐다. 그래서 게임이 비어 있는(혹은 더 적은) 로컬이 ts가 최신이라는
+        // 이유로 원격을 거부하고, write effect가 그 빈 로컬을 클라우드에 덮어써서
+        // 전체 경기 데이터가 통째로 날아갔다.
+        //
+        // 새 규칙: 게임 수(레코드 풍부함)를 우선 비교한다.
+        //  - 원격이 더 많으면 → 원격 채택 (빈/적은 로컬이 클라우드를 절대 못 덮음).
+        //  - 로컬이 더 많으면 → 로컬 유지 → write effect가 클라우드 복구.
+        //  - 동수면 → ts 최신 우선.
+        const countGames = (o: any) =>
+          o && o.games ? (Array.isArray(o.games) ? o.games.length : Object.keys(o.games).length) : 0;
+        const remoteGames = countGames(remoteData);
+        let localGames = 0;
+        try { localGames = countGames(JSON.parse(localStorage.getItem('spike_log_v1') || '{}')); } catch { /* ignore */ }
         const remoteTs = (remoteData && remoteData.lastUpdate) || 0;
         const localTs = Number(localStorage.getItem('spike_log_v1_ts') || 0);
-        if (remoteData && remoteTs >= localTs) {
+        const adoptRemote =
+          !!remoteData &&
+          (remoteGames > localGames || (remoteGames === localGames && remoteTs >= localTs));
+        if (adoptRemote) {
           const { lastUpdate, ...cleanData } = remoteData;
           applyIfChanged(cleanData);
         }
