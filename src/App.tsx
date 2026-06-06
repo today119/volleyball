@@ -1147,6 +1147,10 @@ export default function App() {
   const [params, setParams] = useState<any>({});
   const [currentGameId, setCurrentGameId] = useState<string | null>(null);
   const [currentEventId, setCurrentEventId] = useState<string | null>(null);
+  // 대회 상세 탭 상태 — App 레벨로 올려둠. (뷰 컴포넌트가 중첩 정의라
+  // collab 동기화 setData 때마다 리마운트되는데, 로컬 useState면 탭이
+  // 순위표로 초기화되어 '경기 일정'을 눌러도 튕기는 버그가 있었음.)
+  const [eventDetailTab, setEventDetailTab] = useState<'standings' | 'matches'>('standings');
   // Derive currentGame from data.games (single source of truth)
   const currentGame: Game | null = currentGameId 
     ? data.games.find(g => g.id === currentGameId) ?? null 
@@ -2728,7 +2732,8 @@ export default function App() {
     const event = currentEvent;
     if (!event) return null;
 
-    const [tab, setTab] = useState<'standings' | 'matches'>('standings');
+    const tab = eventDetailTab;
+    const setTab = setEventDetailTab;
     const standings = computeStandings(event, data.games);
     const progress = eventProgress(event, data.games);
 
