@@ -400,15 +400,15 @@ const ScoreboardCard = ({
   const servingB = currentSet.servingTeam === 'B';
 
   return (
-    <div className="flex items-stretch gap-3">
-      {/* HOME 팀 카드 */}
+    // gap·SET박스 폭을 아래 명단 그리드(gap-4, 가운데 lg:w-[300px])에 맞춤 → 세 박스가 컬럼과 정렬
+    <div className="flex items-stretch gap-2 lg:gap-4">
+      {/* HOME 팀 카드 — 왼쪽 팀 컬럼 폭(flex-1)에 정렬 */}
       <div className="flex-1 flex items-stretch bg-white rounded-2xl border-2 border-orange-200 shadow-sm overflow-hidden min-w-0">
-        <div className={cn('w-2 self-stretch', servingA ? 'bg-orange-500' : 'bg-orange-200')} />
+        <div className={cn('w-1.5 self-stretch', servingA ? 'bg-orange-400' : 'bg-orange-100')} />
         <div className="flex items-center px-1.5">
           <span className="text-[10px] font-black text-orange-400 tracking-[0.2em] [writing-mode:vertical-rl] rotate-180">HOME</span>
         </div>
-        <div className="flex-1 flex items-center gap-2.5 pl-1 pr-3 py-4 min-w-0">
-          {servingA && <span className="w-2.5 h-2.5 bg-orange-500 rounded-full animate-pulse shrink-0" />}
+        <div className="flex-1 flex items-center pl-1 pr-3 py-4 min-w-0">
           <span className="text-3xl sm:text-4xl font-black text-slate-900 truncate">{teamA?.name}</span>
         </div>
         <div className={cn('flex items-center pr-5 text-6xl font-black font-mono tabular-nums leading-none', servingA ? 'text-orange-500' : 'text-slate-800')}>
@@ -416,8 +416,8 @@ const ScoreboardCard = ({
         </div>
       </div>
 
-      {/* SET 카드 (가운데) — 풀하이트, 회색 채움, 큰 SET 텍스트 (레퍼런스 일치) */}
-      <div className="flex flex-col items-center justify-center self-stretch bg-slate-50 rounded-2xl border border-slate-200 shadow-sm px-6 min-w-[140px] shrink-0">
+      {/* SET 카드 (가운데) — 가운데 타워 컬럼 폭(lg:w-[300px])에 정렬 */}
+      <div className="flex flex-col items-center justify-center self-stretch bg-slate-50 rounded-2xl border border-slate-200 shadow-sm px-4 min-w-[96px] lg:w-[300px] lg:px-0 shrink-0">
         <div className="text-3xl sm:text-4xl font-black text-slate-800 tracking-wide leading-none">SET {currentSet.number}</div>
         <div className="text-xs font-bold text-slate-400 tracking-[0.25em] mt-2">TO {setTarget}</div>
         {maxSets > 1 && (
@@ -429,19 +429,18 @@ const ScoreboardCard = ({
         )}
       </div>
 
-      {/* AWAY 팀 카드 */}
+      {/* AWAY 팀 카드 — 오른쪽 팀 컬럼 폭(flex-1)에 정렬 */}
       <div className="flex-1 flex items-stretch bg-white rounded-2xl border-2 border-blue-200 shadow-sm overflow-hidden min-w-0">
         <div className={cn('flex items-center pl-5 text-6xl font-black font-mono tabular-nums leading-none', servingB ? 'text-blue-500' : 'text-slate-800')}>
           {currentSet.scoreB}
         </div>
-        <div className="flex-1 flex items-center justify-end gap-2.5 pr-1 pl-3 py-4 min-w-0">
+        <div className="flex-1 flex items-center justify-end pr-1 pl-3 py-4 min-w-0">
           <span className="text-3xl sm:text-4xl font-black text-slate-900 truncate">{teamB?.name}</span>
-          {servingB && <span className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse shrink-0" />}
         </div>
         <div className="flex items-center px-1.5">
           <span className="text-[10px] font-black text-blue-400 tracking-[0.2em] [writing-mode:vertical-rl]">AWAY</span>
         </div>
-        <div className={cn('w-2 self-stretch', servingB ? 'bg-blue-500' : 'bg-blue-200')} />
+        <div className={cn('w-1.5 self-stretch', servingB ? 'bg-blue-400' : 'bg-blue-100')} />
       </div>
     </div>
   );
@@ -2318,7 +2317,7 @@ export default function App() {
     return (
       <div className="flex flex-col h-full bg-slate-950 text-slate-50 overflow-hidden">
         {/* Top header bar — 모바일은 아이콘 위주로 컴팩트, 데스크톱은 라벨 표시 */}
-        <header className="bg-white px-3 lg:px-4 py-2.5 lg:py-3 border-b border-slate-200 shadow-sm z-10 flex items-center justify-between gap-2">
+        <header className="relative bg-white px-3 lg:px-4 py-2.5 lg:py-3 border-b border-slate-200 shadow-sm z-10 flex items-center justify-between gap-2">
           <button
             onClick={() => navigate('home')}
             className="flex items-center gap-2 px-2.5 lg:px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-base font-bold transition-colors border border-slate-200 shrink-0"
@@ -2327,8 +2326,8 @@ export default function App() {
             <ChevronLeft size={18} />
             <span className="hidden lg:inline">일시중단</span>
           </button>
-          {/* 상태 칩 묶음 — 모바일은 작게 */}
-          <div className="flex items-center gap-1.5 min-w-0">
+          {/* 상태 칩 묶음 — 모바일은 헤더 가로 중앙 정렬(absolute), 데스크톱은 일반 흐름 */}
+          <div className="flex items-center gap-1.5 min-w-0 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 lg:static lg:translate-x-0 lg:translate-y-0">
             <RoleBadge role={role} />
             <div className="text-xs lg:text-sm font-black text-slate-600 uppercase tracking-wider bg-slate-100 px-2 lg:px-3 py-1 lg:py-1.5 rounded-lg whitespace-nowrap">SET {setId + 1}</div>
             <div className="text-xs lg:text-sm font-black text-orange-600 uppercase tracking-wider bg-orange-50 px-2 lg:px-3 py-1 lg:py-1.5 rounded-lg whitespace-nowrap">{game.format}</div>
