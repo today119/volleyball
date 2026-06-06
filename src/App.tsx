@@ -731,6 +731,7 @@ const SubstitutionPicker = ({
 
 const CourtPlayers = ({
   team, teamName, players, courtIds, serverIdx, isServing, stats, onTap, onBenchTap, disabled,
+  benchOpen: benchOpenProp, onToggleBench,
 }: {
   team: 'A' | 'B';
   teamName: string;
@@ -742,11 +743,16 @@ const CourtPlayers = ({
   onTap: (playerId: string) => void;
   onBenchTap?: (playerId: string) => void;
   disabled?: boolean;
+  /** 펼침 상태를 상위(App)에서 제어 — collab 리렌더/리마운트에도 유지되도록 hoist. 미지정 시 로컬 폴백. */
+  benchOpen?: boolean;
+  onToggleBench?: () => void;
 }) => {
   const serverId = courtIds[serverIdx % Math.max(courtIds.length, 1)];
   const courtPlayers = courtIds.map(id => players.find(p => p.id === id)).filter(Boolean) as Player[];
   const benchPlayers = players.filter(p => !courtIds.includes(p.id));
-  const [benchOpen, setBenchOpen] = useState(false);
+  const [benchOpenLocal, setBenchOpenLocal] = useState(false);
+  const benchOpen = benchOpenProp ?? benchOpenLocal;
+  const toggleBench = onToggleBench ?? (() => setBenchOpenLocal(o => !o));
 
   // 통계 계산
   const computeStats = (s?: PlayerStats) => {
@@ -893,7 +899,7 @@ const CourtPlayers = ({
         <div>
           <button
             type="button"
-            onClick={() => setBenchOpen(o => !o)}
+            onClick={toggleBench}
             className={cn(
               "w-full flex items-center justify-between text-[10px] font-black uppercase tracking-wider mb-2 px-1 py-1.5 rounded-lg hover:bg-slate-100 transition-colors",
               team === 'A' ? "text-orange-700" : "text-blue-700"
@@ -1148,10 +1154,21 @@ export default function App() {
   // 경기 설정 모달 open 상태도 App 레벨로 — 중첩 게임뷰가 collab 동기화로 리마운트되면
   // 로컬 useState(false)로 초기화되어 모바일에서 모달이 열리자마자 닫히던(깜빡) 버그 방지.
   const [showSettings, setShowSettings] = useState(false);
+  // 대기명단 펼침도 App 레벨 — 게임뷰가 collab 리렌더로 리마운트돼도 펼침 유지(깜빡이며 닫힘 방지).
+  const [benchOpenA, setBenchOpenA] = useState(false);
+  const [benchOpenB, setBenchOpenB] = useState(false);
   // Derive currentGame from data.games (single source of truth)
-  const currentGame: Game | null = currentGameId 
-    ? data.games.find(g => g.id === currentGameId) ?? null 
+  const currentGame: Game | null = currentGameId
+    ? data.games.find(g => g.id === currentGameId) ?? null
     : null;
+  // 경기 설정 변경(인원수·세트수·목표점수) — 모달을 App 레벨에서 렌더하므로 핸들러도 App 레벨.
+  const applyGameSettings = (patch: Partial<Pick<Game, 'courtN' | 'maxSets' | 'setTarget'>>) => {
+    if (!currentGame) return;
+    setData(prev => ({
+      ...prev,
+      games: prev.games.map(g => g.id === currentGame.id ? { ...g, ...patch } : g),
+    }));
+  };
   const currentEvent: VBEvent | null = currentEventId
     ? data.events.find(e => e.id === currentEventId) ?? null
     : null;
@@ -2163,13 +2180,7 @@ export default function App() {
     );
     const pickMobileTeam = (t: 'A' | 'B') => { setMobileTeam(t); localStorage.setItem('spike_mobile_team', t); };
 
-    // 경기 설정 수정 모달 open 상태는 App 레벨로 hoist됨(리마운트 견딤).
-    const applyGameSettings = (patch: Partial<Pick<Game, 'courtN' | 'maxSets' | 'setTarget'>>) => {
-      setData(prev => ({
-        ...prev,
-        games: prev.games.map(g => g.id === game.id ? { ...g, ...patch } : g),
-      }));
-    };
+    // 경기 설정 모달 open 상태·핸들러·모달 렌더는 App 레벨로 hoist됨(리마운트 견딤).
 
     // Role-based filtering: students see only their assigned action buttons.
     // Teacher sees everything.
@@ -2381,6 +2392,8 @@ export default function App() {
                 onTap={(pid) => handlePlayerTap('A', pid)}
                 onBenchTap={(pid) => setPendingSub({ benchId: pid, team: 'A' })}
                 disabled={readOnly}
+                benchOpen={benchOpenA}
+                onToggleBench={() => setBenchOpenA(o => !o)}
               />
             </div>
 
@@ -2428,6 +2441,8 @@ export default function App() {
                 onTap={(pid) => handlePlayerTap('B', pid)}
                 onBenchTap={(pid) => setPendingSub({ benchId: pid, team: 'B' })}
                 disabled={readOnly}
+                benchOpen={benchOpenB}
+                onToggleBench={() => setBenchOpenB(o => !o)}
               />
             </div>
           </div>
@@ -2459,51 +2474,7 @@ export default function App() {
           </footer>
         )}
 
-        {/* 경기 설정 수정 모달 (인원수·세트수·목표점수) */}
-        {showSettings && (
-          <ModalOverlay onClose={() => setShowSettings(false)}>
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">경기 설정 수정</div>
-            <div className="space-y-4">
-              <div>
-                <div className="text-[11px] font-bold text-slate-400 mb-1.5">인원수</div>
-                <div className="grid grid-cols-2 gap-2">
-                  {[6, 9].map(n => (
-                    <button key={n} onClick={() => applyGameSettings({ courtN: n })}
-                      className={cn('py-2.5 rounded-xl font-black text-sm transition-all', (game.courtN ?? 6) === n ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-400')}>
-                      {n}인제
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div className="text-[11px] font-bold text-slate-400 mb-1.5">경기 방식</div>
-                <div className="grid grid-cols-3 gap-2">
-                  {[{ v: 1, l: '단판' }, { v: 3, l: '3전2선승' }, { v: 5, l: '5전3선승' }].map(o => (
-                    <button key={o.v} onClick={() => applyGameSettings({ maxSets: o.v })}
-                      className={cn('py-2.5 rounded-xl font-bold text-xs transition-all', (game.maxSets ?? 1) === o.v ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-400')}>
-                      {o.l}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div className="text-[11px] font-bold text-slate-400 mb-1.5">목표 점수</div>
-                <div className="grid grid-cols-3 gap-2">
-                  {[15, 21, 25].map(n => (
-                    <button key={n} onClick={() => applyGameSettings({ setTarget: n })}
-                      className={cn('py-2.5 rounded-xl font-bold text-sm transition-all', (game.setTarget ?? 25) === n ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-400')}>
-                      {n}점
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="text-[10px] text-amber-400/90 bg-amber-500/10 rounded-lg p-2 leading-relaxed">
-                ※ 인원수를 줄이면 코트 인원이 초과될 수 있어요 — 변경 후 '코트 재편성'으로 확인하세요.
-              </div>
-            </div>
-            <Button variant="primary" className="w-full mt-4" onClick={() => setShowSettings(false)}>완료</Button>
-          </ModalOverlay>
-        )}
+        {/* 경기 설정 모달은 App 레벨에서 렌더(리마운트로 인한 깜빡임 방지) */}
 
         {/* Category picker modal — adds Substitution option for teacher */}
         {pendingAction && !pendingAction.category && (
@@ -3271,6 +3242,52 @@ export default function App() {
           {view === 'settings' && <SettingsView />}
         </motion.div>
       </AnimatePresence>
+
+      {/* 경기 설정 수정 모달 — App 레벨에서 렌더(게임뷰 리마운트와 무관하게 안정적으로 유지, 트랜지션 재생 방지) */}
+      {showSettings && view === 'game-record' && currentGame && (
+        <ModalOverlay onClose={() => setShowSettings(false)}>
+          <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">경기 설정 수정</div>
+          <div className="space-y-4">
+            <div>
+              <div className="text-[11px] font-bold text-slate-400 mb-1.5">인원수</div>
+              <div className="grid grid-cols-2 gap-2">
+                {[6, 9].map(n => (
+                  <button key={n} onClick={() => applyGameSettings({ courtN: n })}
+                    className={cn('py-2.5 rounded-xl font-black text-sm transition-all', (currentGame.courtN ?? 6) === n ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-400')}>
+                    {n}인제
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] font-bold text-slate-400 mb-1.5">경기 방식</div>
+              <div className="grid grid-cols-3 gap-2">
+                {[{ v: 1, l: '단판' }, { v: 3, l: '3전2선승' }, { v: 5, l: '5전3선승' }].map(o => (
+                  <button key={o.v} onClick={() => applyGameSettings({ maxSets: o.v })}
+                    className={cn('py-2.5 rounded-xl font-bold text-xs transition-all', (currentGame.maxSets ?? 1) === o.v ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-400')}>
+                    {o.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] font-bold text-slate-400 mb-1.5">목표 점수</div>
+              <div className="grid grid-cols-3 gap-2">
+                {[15, 21, 25].map(n => (
+                  <button key={n} onClick={() => applyGameSettings({ setTarget: n })}
+                    className={cn('py-2.5 rounded-xl font-bold text-sm transition-all', (currentGame.setTarget ?? 25) === n ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-400')}>
+                    {n}점
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="text-[10px] text-amber-400/90 bg-amber-500/10 rounded-lg p-2 leading-relaxed">
+              ※ 인원수를 줄이면 코트 인원이 초과될 수 있어요 — 변경 후 '코트 재편성'으로 확인하세요.
+            </div>
+          </div>
+          <Button variant="primary" className="w-full mt-4" onClick={() => setShowSettings(false)}>완료</Button>
+        </ModalOverlay>
+      )}
     </div>
   );
 }
