@@ -42,6 +42,8 @@ import {
 } from './types';
 import { useFirebaseSync } from './lib/useFirebaseSync';
 import { useGameLogic } from './lib/useGameLogic';
+import { readScoreEvents } from './lib/cloudOps';
+import { useAuth, signInWithGoogle, signOut } from './lib/auth';
 import { 
   deriveRates, 
   aggregatePlayerStatsInGame,
@@ -497,7 +499,7 @@ const ScoreTowerVertical = ({
   teamA,
   teamB,
 }: {
-  scoreEvents: GameSet['scoreEvents'];
+  scoreEvents: any; // 배열(솔로/레거시) 또는 객체(collab push) 모두 허용 — readScoreEvents로 정규화
   teamA?: Team;
   teamB?: Team;
 }) => {
@@ -505,7 +507,7 @@ const ScoreTowerVertical = ({
   
   const aPoints: Array<{ playerNumber?: string }> = [];
   const bPoints: Array<{ playerNumber?: string }> = [];
-  for (const ev of scoreEvents) {
+  for (const ev of readScoreEvents(scoreEvents)) {
     const num = allPlayers.find(p => p.id === ev.playerId)?.number;
     if (ev.team === 'A') aPoints.push({ playerNumber: num });
     else bPoints.push({ playerNumber: num });
@@ -1104,9 +1106,25 @@ const StatPill = ({ label, value, pct }: { label: string; value: string; pct: nu
 
 export default function App() {
   // ── Session detection from URL ─────────────────────────────────────
-  const [session, setSession] = useState(() => getSessionParams());
-  const readOnly = session.mode === 'share';
+  // 부팅 자동 collab: 세션 없으면 메인 워크스페이스(spikelog/main)에 연결.
+  const [session, setSession] = useState(() => {
+    const p = getSessionParams();
+    if (!p.sessionId) return { sessionId: 'main', mode: 'collab' as const };
+    return p;
+  });
+
+  // ── 인증(구글 학교계정) ─────────────────────────────────────────────
+  const { user: authUser, allowed: canRecord } = useAuth();
+
+  // 쓰기 권한이 없으면(미로그인/도메인 외) 읽기전용 뷰어로 동작.
+  const readOnly = session.mode === 'share' || !canRecord;
   const firebaseEnabled = session.mode === 'collab' || session.mode === 'share';
+
+  const handleLogin = async () => {
+    try { await signInWithGoogle(); }
+    catch (e: any) { alert(e?.message || '로그인에 실패했습니다.'); }
+  };
+  const handleLogout = async () => { try { await signOut(); } catch { /* noop */ } };
 
   const [data, setData] = useState<AppData>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -1178,6 +1196,7 @@ export default function App() {
   // Persistence: always cache to localStorage as offline fallback
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(STORAGE_KEY + '_ts', String(Date.now())); // 첫 스냅샷 lastUpdate 머지용
   }, [data]);
 
   // ── Session actions ────────────────────────────────────────────────
@@ -1231,7 +1250,19 @@ export default function App() {
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Volleyball Performance Tracker</p>
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          {canRecord ? (
+            <>
+              <span className="text-[11px] text-emerald-400 font-bold max-w-[140px] truncate" title={authUser?.email ?? ''}>
+                ● {authUser?.name || authUser?.email}
+              </span>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>로그아웃</Button>
+            </>
+          ) : (
+            <Button variant="success" size="sm" onClick={handleLogin}>
+              {authUser ? '다른 계정' : '구글 로그인'}
+            </Button>
+          )}
           <SessionBadge session={session} onShare={copyShareLink} />
           <Button variant="ghost" size="sm" onClick={() => navigate('settings')} icon={Settings} />
         </div>
@@ -2141,7 +2172,16 @@ export default function App() {
       setData,
       currentGame: game,
       currentSetIdx: setId,
+      sessionId: session.sessionId,
+      // collab + 쓰기가능(읽기전용 아님)일 때만 RTDB 경로단위 쓰기.
+      cloudWrite: session.mode === 'collab' && !readOnly,
     });
+
+    // 모바일: 한 팀만 선택해 기록 (기기별 로컬 상태). 데스크톱은 양팀 모두 표시.
+    const [mobileTeam, setMobileTeam] = useState<'A' | 'B'>(
+      () => ((localStorage.getItem('spike_mobile_team') as 'A' | 'B') || 'A')
+    );
+    const pickMobileTeam = (t: 'A' | 'B') => { setMobileTeam(t); localStorage.setItem('spike_mobile_team', t); };
 
     // Role-based filtering: students see only their assigned action buttons.
     // Teacher sees everything.
@@ -2271,7 +2311,7 @@ export default function App() {
     // Build cumulative score tower data (each scoring event lights a number box)
     // Tower 1: 1-10, Tower 2: 11-20, Tower 3: 21-30
     const buildScoreSequence = (team: 'A' | 'B'): number[] => {
-      return (set.scoreEvents ?? [])
+      return readScoreEvents(set.scoreEvents)
         .filter(e => e.team === team)
         .map((_, i) => i + 1); // points 1, 2, 3, ...
     };
@@ -2323,27 +2363,49 @@ export default function App() {
             teamB={teamB}
           />
 
-          {/* 하단: 코트 A | 컨트롤 (타워+버튼) | 코트 B */}
+          {/* 하단: 데스크톱 3열(양팀) / 모바일 1열(선택 팀 + 토글) */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px_1fr] gap-4">
-            {/* Team A — 코트 + 대기 통합 */}
-            <CourtPlayers
-              team="A"
-              teamName={teamA?.name ?? ''}
-              players={teamA?.players ?? []}
-              courtIds={set.courtA}
-              serverIdx={set.serverIdxA}
-              isServing={set.servingTeam === 'A'}
-              stats={set.playerStats ?? {}}
-              onTap={(pid) => handlePlayerTap('A', pid)}
-              onBenchTap={(pid) => setPendingSub({ benchId: pid, team: 'A' })}
-              disabled={readOnly}
-            />
+            {/* 모바일 전용 팀 토글 (lg 미만에서만) */}
+            <div className="order-1 lg:hidden">
+              <div className="grid grid-cols-2 gap-2 bg-white rounded-2xl border border-slate-200 p-1.5 shadow-sm">
+                {([['A', teamA?.name] , ['B', teamB?.name]] as Array<['A' | 'B', string | undefined]>).map(([t, name]) => (
+                  <button
+                    key={t}
+                    onClick={() => pickMobileTeam(t)}
+                    className={cn(
+                      'py-2.5 rounded-xl font-black text-sm transition-all',
+                      mobileTeam === t
+                        ? (t === 'A' ? 'bg-orange-600 text-white' : 'bg-blue-600 text-white')
+                        : 'bg-slate-100 text-slate-500'
+                    )}
+                  >
+                    {name || (t === 'A' ? '홈' : '어웨이')}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-            {/* Center — 타워 + 컨트롤 (꽉 차게) */}
-            <div className="flex flex-col gap-3 self-stretch">
-              {/* Score tower — 늘어남 */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-4 flex-1 flex items-center justify-center shadow-sm">
-                <ScoreTowerVertical 
+            {/* Team A — 코트 + 대기 통합 (모바일: 선택 시만) */}
+            <div className={cn('order-2 lg:order-none', mobileTeam === 'A' ? 'block' : 'hidden', 'lg:block')}>
+              <CourtPlayers
+                team="A"
+                teamName={teamA?.name ?? ''}
+                players={teamA?.players ?? []}
+                courtIds={set.courtA}
+                serverIdx={set.serverIdxA}
+                isServing={set.servingTeam === 'A'}
+                stats={set.playerStats ?? {}}
+                onTap={(pid) => handlePlayerTap('A', pid)}
+                onBenchTap={(pid) => setPendingSub({ benchId: pid, team: 'A' })}
+                disabled={readOnly}
+              />
+            </div>
+
+            {/* Center — 타워 + 컨트롤 (모바일에선 타워 숨김) */}
+            <div className="order-3 lg:order-none flex flex-col gap-3 self-stretch">
+              {/* Score tower — 데스크톱만 */}
+              <div className="hidden lg:flex bg-white rounded-2xl border border-slate-200 p-4 flex-1 items-center justify-center shadow-sm">
+                <ScoreTowerVertical
                   scoreEvents={set.scoreEvents ?? []}
                   teamA={teamA}
                   teamB={teamB}
@@ -2398,19 +2460,21 @@ export default function App() {
               )}
             </div>
 
-            {/* Team B — 코트 + 대기 통합 */}
-            <CourtPlayers
-              team="B"
-              teamName={teamB?.name ?? ''}
-              players={teamB?.players ?? []}
-              courtIds={set.courtB}
-              serverIdx={set.serverIdxB}
-              isServing={set.servingTeam === 'B'}
-              stats={set.playerStats ?? {}}
-              onTap={(pid) => handlePlayerTap('B', pid)}
-              onBenchTap={(pid) => setPendingSub({ benchId: pid, team: 'B' })}
-              disabled={readOnly}
-            />
+            {/* Team B — 코트 + 대기 통합 (모바일: 선택 시만) */}
+            <div className={cn('order-2 lg:order-none', mobileTeam === 'B' ? 'block' : 'hidden', 'lg:block')}>
+              <CourtPlayers
+                team="B"
+                teamName={teamB?.name ?? ''}
+                players={teamB?.players ?? []}
+                courtIds={set.courtB}
+                serverIdx={set.serverIdxB}
+                isServing={set.servingTeam === 'B'}
+                stats={set.playerStats ?? {}}
+                onTap={(pid) => handlePlayerTap('B', pid)}
+                onBenchTap={(pid) => setPendingSub({ benchId: pid, team: 'B' })}
+                disabled={readOnly}
+              />
+            </div>
           </div>
         </main>
 
@@ -3143,8 +3207,21 @@ export default function App() {
   return (
     <div className={containerClass}>
       {readOnly && (
-        <div className="absolute top-0 left-0 right-0 z-50 bg-blue-600/90 text-white text-[10px] font-bold uppercase tracking-widest text-center py-1 backdrop-blur-sm">
-          <Eye size={10} className="inline mr-1" /> 읽기 전용 공유 모드
+        <div className="absolute top-0 left-0 right-0 z-50 bg-blue-600/90 text-white text-[11px] font-bold text-center py-1.5 px-3 backdrop-blur-sm flex items-center justify-center gap-3">
+          <span>
+            <Eye size={11} className="inline mr-1" />
+            {session.mode === 'share'
+              ? '읽기 전용 공유 모드'
+              : (authUser ? '이 계정은 기록 권한이 없습니다 (학교 계정 필요) — 보기 전용' : '보기 전용 — 기록하려면 학교 구글 계정으로 로그인')}
+          </span>
+          {session.mode !== 'share' && (
+            <button
+              onClick={handleLogin}
+              className="px-2.5 py-0.5 rounded-md bg-white text-blue-700 font-black text-[11px] hover:bg-blue-50 transition-colors"
+            >
+              {authUser ? '학교 계정으로 로그인' : '구글 로그인'}
+            </button>
+          )}
         </div>
       )}
       <AnimatePresence mode="wait">
