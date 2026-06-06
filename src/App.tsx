@@ -1229,14 +1229,15 @@ export default function App() {
 
   const HomeView = () => (
     <div className="flex flex-col h-full bg-slate-950 text-slate-50">
-      <header className="p-4 lg:p-6 flex justify-between items-center border-b border-slate-900 gap-2">
+      <header className="p-4 lg:p-6 border-b border-slate-900">
+       <div className="flex justify-between items-center gap-2">
         <div className="flex items-center gap-2 lg:gap-3 min-w-0">
           <div className="w-9 h-9 lg:w-10 lg:h-10 bg-sky-500 rounded-xl flex items-center justify-center shadow-lg shadow-sky-500/30 shrink-0">
             <Volleyball size={22} className="text-white" />
           </div>
           <div className="min-w-0">
             <h1 className="text-lg lg:text-xl font-black tracking-tight text-white truncate">Spike <span className="text-sky-400">Log</span> Pro</h1>
-            {/* 태그라인은 모바일에선 하단 푸터로 이동 — 상단을 가볍게 */}
+            {/* 데스크톱: 로고 아래 태그라인. 모바일: 헤더 하단 풀폭 띠로 별도 표시(아래) */}
             <p className="hidden lg:block text-[10px] text-slate-500 font-bold uppercase tracking-widest">Volleyball Performance Tracker</p>
           </div>
         </div>
@@ -1273,6 +1274,9 @@ export default function App() {
           <SessionBadge session={session} onShare={copyShareLink} />
           <Button variant="ghost" size="sm" onClick={() => navigate('settings')} icon={Settings} />
         </div>
+       </div>
+        {/* 태그라인 — 모바일에서만 헤더 하단 풀폭 띠로 옅게 */}
+        <p className="lg:hidden text-center text-[9px] text-slate-600 font-bold uppercase tracking-[0.3em] mt-2.5">Volleyball Performance Tracker</p>
       </header>
 
       <main className="flex-1 overflow-y-auto p-6 space-y-8 min-h-0">
@@ -1555,8 +1559,6 @@ export default function App() {
         >
           {readOnly ? '읽기 전용 모드' : '새 경기 시작하기'}
         </Button>
-        {/* 태그라인 — 모바일에서만 하단에 옅게(상단에서 내려옴) */}
-        <p className="lg:hidden text-center text-[9px] text-slate-600 font-bold uppercase tracking-[0.3em] mt-3">Volleyball Performance Tracker</p>
       </footer>
     </div>
   );
