@@ -1386,9 +1386,9 @@ export default function App() {
           </div>
 
           {data.events.length === 0 ? (
-            <div className="text-center py-8 bg-slate-900/30 rounded-3xl border border-dashed border-slate-800">
-              <p className="text-slate-500 text-xs">대회를 만들어 리그를 운영하세요.</p>
-              <p className="text-slate-600 text-[10px] mt-1">팀 선택 → 라운드 수 입력 → 자동 일정 생성</p>
+            <div className="text-center py-8 bg-slate-900/30 rounded-xl lg:rounded-3xl border border-dashed border-slate-800">
+              <p className="text-slate-500 text-sm">대회를 만들어 리그를 운영하세요.</p>
+              <p className="text-slate-600 text-xs mt-1">팀 선택 → 라운드 수 입력 → 자동 일정 생성</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -1408,13 +1408,13 @@ export default function App() {
                     <div className="p-4">
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-black text-slate-900 truncate">{event.name}</h3>
-                        <div className="text-[10px] text-slate-500 mt-0.5">
+                        <h3 className="font-black text-base text-slate-900 truncate">{event.name}</h3>
+                        <div className="text-xs lg:text-[10px] text-slate-500 mt-0.5">
                           {event.teamIds.length}팀 · {event.rounds}라운드 · 총 {event.matches.length}경기
                         </div>
                       </div>
                       {isOngoing && (
-                        <div className="text-[9px] font-black bg-orange-100 text-orange-700 px-2 py-1 rounded">
+                        <div className="text-[10px] font-black bg-orange-100 text-orange-700 px-2 py-1 rounded">
                           진행중
                         </div>
                       )}
@@ -1460,7 +1460,7 @@ export default function App() {
                       return (
                         <Card 
                           key={game.id} 
-                          className="cursor-pointer hover:bg-slate-900 transition-colors border-emerald-600/30 bg-emerald-600/5" 
+                          className="rounded-xl lg:rounded-2xl cursor-pointer hover:bg-slate-900 transition-colors border-emerald-600/30 bg-emerald-600/5"
                           onClick={() => {
                             setCurrentGameId(game.id);
                             // jump back into recording at last set
@@ -1511,7 +1511,7 @@ export default function App() {
                   <History size={16} /> 종료된 경기
                 </h2>
                 {finished.length === 0 ? (
-                  <div className="text-center py-12 bg-slate-900/30 rounded-3xl border border-dashed border-slate-800">
+                  <div className="text-center py-8 lg:py-12 bg-slate-900/30 rounded-xl lg:rounded-3xl border border-dashed border-slate-800">
                     <p className="text-slate-500 text-sm">종료된 경기가 없습니다.</p>
                   </div>
                 ) : (
@@ -1520,12 +1520,12 @@ export default function App() {
                       const teamA = data.teams.find(t => t.id === game.teamAId);
                       const teamB = data.teams.find(t => t.id === game.teamBId);
                       return (
-                        <Card key={game.id} className="cursor-pointer hover:bg-slate-900 transition-colors" onClick={() => {
+                        <Card key={game.id} className="rounded-xl lg:rounded-2xl cursor-pointer hover:bg-slate-900 transition-colors" onClick={() => {
                           setCurrentGameId(game.id);
                           navigate('dashboard', { gameId: game.id });
                         }}>
                           <div className="flex justify-between items-center">
-                            <div className="text-[10px] font-bold text-slate-500 mb-1">{game.date}</div>
+                            <div className="text-xs lg:text-[10px] font-bold text-slate-500 mb-1">{game.date}</div>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
