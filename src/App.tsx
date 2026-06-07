@@ -440,7 +440,7 @@ const ScoreboardCard = ({
       </div>
 
       {/* SET 카드 (가운데) — 모바일은 좁게, 데스크톱은 타워 컬럼 폭 */}
-      <div className="flex flex-col items-center justify-center self-stretch bg-slate-50 rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm w-14 lg:w-[300px] px-1 lg:px-0 shrink-0">
+      <div className="flex flex-col items-center justify-center self-stretch bg-slate-50 rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm w-14 lg:w-[240px] px-1 lg:px-0 shrink-0">
         <div className="text-sm lg:text-4xl font-black text-slate-800 tracking-tight lg:tracking-wide leading-none whitespace-nowrap">SET {currentSet.number}</div>
         <div className="text-[8px] lg:text-xs font-bold text-slate-400 tracking-wider lg:tracking-[0.25em] mt-0.5 lg:mt-2 whitespace-nowrap">TO {setTarget}</div>
       </div>
@@ -493,7 +493,7 @@ const ScoreTowerVertical = ({
     color: 'orange' | 'blue'
   ) => (
     <div
-      className="grid grid-cols-2 gap-1.5"
+      className="grid grid-cols-2 gap-1"
       style={{ gridAutoFlow: 'column', gridTemplateRows: 'repeat(15, minmax(0, 1fr))' }}
     >
       {Array.from({ length: 30 }, (_, idx) => {
@@ -502,7 +502,7 @@ const ScoreTowerVertical = ({
           <div
             key={idx}
             className={cn(
-              "w-10 h-10 rounded-md flex items-center justify-center text-xs font-bold font-mono border-2",
+              "w-8 h-8 rounded-md flex items-center justify-center text-[11px] font-bold font-mono border-2",
               pt
                 ? color === 'orange'
                   ? "bg-orange-500 text-white border-orange-600 shadow-sm"
@@ -519,12 +519,12 @@ const ScoreTowerVertical = ({
   );
 
   return (
-    <div className="flex gap-4 justify-center items-start py-2">
-      <div className="flex flex-col items-center gap-2">
+    <div className="flex gap-3 justify-center items-start py-1">
+      <div className="flex flex-col items-center gap-1.5">
         <div className="text-[10px] font-black text-orange-600 uppercase tracking-widest">HOME</div>
         {renderTower(aPoints, 'orange')}
       </div>
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-col items-center gap-1.5">
         <div className="text-[10px] font-black text-blue-600 uppercase tracking-widest">AWAY</div>
         {renderTower(bPoints, 'blue')}
       </div>
@@ -800,7 +800,7 @@ const CourtPlayers = ({
         onClick={() => isCourt ? onTap(p.id) : onBenchTap?.(p.id)}
         disabled={disabled}
         className={cn(
-          "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all active:scale-[0.98] text-left",
+          "w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl border-2 transition-all active:scale-[0.98] text-left",
           isServer
             ? team === 'A'
               ? "bg-orange-500 border-orange-600 shadow-md"
@@ -817,7 +817,7 @@ const CourtPlayers = ({
       >
         {/* 번호 박스 */}
         <div className={cn(
-          "w-12 h-12 rounded-lg flex items-center justify-center font-black text-2xl flex-shrink-0 relative",
+          "w-10 h-10 rounded-lg flex items-center justify-center font-black text-xl flex-shrink-0 relative",
           isServer
             ? "bg-white/25 text-white"
             : isCourt
@@ -880,36 +880,19 @@ const CourtPlayers = ({
       "rounded-2xl p-3 border-2",
       team === 'A' ? "bg-orange-50 border-orange-200" : "bg-blue-50 border-blue-200"
     )}>
-      {/* 팀 헤더 */}
-      <div className={cn(
-        "flex items-center justify-between mb-3 pb-2 border-b-2",
-        team === 'A' ? "border-orange-200" : "border-blue-200"
-      )}>
-        <div className={cn(
-          "text-base font-black truncate",
-          team === 'A' ? "text-orange-700" : "text-blue-700"
-        )}>{teamName}</div>
-        {isServing && (
-          <div className={cn(
-            "flex items-center gap-1 text-xs font-black flex-shrink-0",
-            team === 'A' ? "text-orange-600" : "text-blue-600"
-          )}>
-            <div className={cn(
-              "w-2 h-2 rounded-full animate-pulse",
-              team === 'A' ? "bg-orange-500" : "bg-blue-500"
-            )} />
-            서브
-          </div>
-        )}
-      </div>
-
-      {/* 코트 선수 (주전) */}
+      {/* 코트 선수 (주전) — 팀명은 상단 스코어보드에 있으므로 컬럼에선 생략(중복 제거·공간 절약) */}
       <div className="mb-3">
         <div className={cn(
-          "text-[10px] font-black uppercase tracking-wider mb-2 px-1",
+          "flex items-center justify-between mb-2 px-1",
           team === 'A' ? "text-orange-700" : "text-blue-700"
         )}>
-          코트 ({courtPlayers.length}명)
+          <span className="text-[10px] font-black uppercase tracking-wider">코트 ({courtPlayers.length}명)</span>
+          {isServing && (
+            <span className="flex items-center gap-1 text-[11px] font-black">
+              <span className={cn("w-2 h-2 rounded-full animate-pulse", team === 'A' ? "bg-orange-500" : "bg-blue-500")} />
+              서브
+            </span>
+          )}
         </div>
         <div className="space-y-1.5">
           {courtPlayers.map(p => renderRow(p, true))}
@@ -1191,9 +1174,11 @@ export default function App() {
   // 경기 설정 변경(인원수·세트수·목표점수) — 모달을 App 레벨에서 렌더하므로 핸들러도 App 레벨.
   const applyGameSettings = (patch: Partial<Pick<Game, 'courtN' | 'maxSets' | 'setTarget'>>) => {
     if (!currentGame) return;
+    // 인원수(courtN) 변경 시 format 문자열("N인제")도 함께 갱신 — 헤더/카드 표기 일치.
+    const extra = patch.courtN != null ? { format: `${patch.courtN}인제` } : {};
     setData(prev => ({
       ...prev,
-      games: prev.games.map(g => g.id === currentGame.id ? { ...g, ...patch } : g),
+      games: prev.games.map(g => g.id === currentGame.id ? { ...g, ...patch, ...extra } : g),
     }));
   };
   const currentEvent: VBEvent | null = currentEventId
@@ -2362,11 +2347,12 @@ export default function App() {
             <ChevronLeft size={18} />
             <span className="hidden lg:inline">일시중단</span>
           </button>
-          {/* 상태 칩 묶음 — 모바일은 헤더 가로 중앙 정렬(absolute), 데스크톱은 일반 흐름 */}
-          <div className="flex items-center gap-1.5 min-w-0 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 lg:static lg:translate-x-0 lg:translate-y-0">
+          {/* 상태 칩 묶음 — 모바일·데스크톱 모두 헤더 가로 정중앙 정렬(absolute) */}
+          <div className="flex items-center gap-1.5 min-w-0 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
             <RoleBadge role={role} />
             <div className="text-xs lg:text-sm font-black text-slate-600 uppercase tracking-wider bg-slate-100 px-2 lg:px-3 py-1 lg:py-1.5 rounded-lg whitespace-nowrap">SET {setId + 1}</div>
-            <div className="text-xs lg:text-sm font-black text-orange-600 uppercase tracking-wider bg-orange-50 px-2 lg:px-3 py-1 lg:py-1.5 rounded-lg whitespace-nowrap">{game.format}</div>
+            {/* 인원수는 courtN에서 파생 — 경기설정으로 9인제 바꿔도 항상 일치 */}
+            <div className="text-xs lg:text-sm font-black text-orange-600 uppercase tracking-wider bg-orange-50 px-2 lg:px-3 py-1 lg:py-1.5 rounded-lg whitespace-nowrap">{game.courtN ?? 6}인제</div>
           </div>
           <div className="flex items-center gap-1.5 lg:gap-2 shrink-0">
             <button
@@ -2433,7 +2419,7 @@ export default function App() {
             </div>
 
             {/* Center 득점 타워 + 컨트롤 — 데스크톱만, 항상 보임 (레퍼런스: 타워 아래 컨트롤) */}
-            <div className="hidden lg:flex lg:w-[300px] shrink-0 flex-col min-h-0 gap-3">
+            <div className="hidden lg:flex lg:w-[240px] shrink-0 flex-col min-h-0 gap-3">
               <div className="bg-white rounded-2xl border border-slate-200 p-3 flex-1 overflow-y-auto flex items-start justify-center shadow-sm">
                 <ScoreTowerVertical scoreEvents={set.scoreEvents ?? []} teamA={teamA} teamB={teamB} />
               </div>
