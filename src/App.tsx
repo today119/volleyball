@@ -3002,18 +3002,18 @@ export default function App() {
         <main className="flex-1 overflow-y-auto p-6 min-h-0">
           {tab === 'standings' && (
             <div className="space-y-3">
-              <div className="overflow-x-auto bg-slate-900/30 rounded-xl lg:rounded-2xl border border-slate-800">
+              <div className="overflow-auto max-h-[60vh] bg-slate-900/30 rounded-xl lg:rounded-2xl border border-slate-800">
                 <table className="w-full text-sm lg:text-xs">
                   <thead>
-                    <tr className="border-b border-slate-800 text-slate-500">
-                      <th className="text-left px-2.5 py-2.5 lg:p-3 font-bold">순위</th>
-                      <th className="text-left px-2.5 py-2.5 lg:p-3 font-bold">팀</th>
-                      <th className="text-right px-2.5 py-2.5 lg:p-3 font-bold">경기</th>
-                      <th className="text-right px-2.5 py-2.5 lg:p-3 font-bold">승</th>
-                      <th className="text-right px-2.5 py-2.5 lg:p-3 font-bold">패</th>
-                      <th className="text-right px-2.5 py-2.5 lg:p-3 font-bold">세트</th>
-                      <th className="text-right px-2.5 py-2.5 lg:p-3 font-bold">득실</th>
-                      <th className="text-right px-2.5 py-2.5 lg:p-3 font-bold text-orange-500">승점</th>
+                    <tr className="text-slate-500">
+                      <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-left px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap">순위</th>
+                      <th className="sticky top-0 left-0 z-30 bg-white shadow-[0_1px_0_0_#e2e8f0] text-left px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[96px]">팀</th>
+                      <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap">경기</th>
+                      <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap">승</th>
+                      <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap">패</th>
+                      <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap">세트</th>
+                      <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap">득실</th>
+                      <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold text-orange-500 whitespace-nowrap">승점</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -3031,7 +3031,7 @@ export default function App() {
                             "bg-slate-800 text-slate-400"
                           )}>{idx + 1}</span>
                         </td>
-                        <td className="px-2.5 py-2.5 lg:p-3 font-bold text-slate-100">{teamName(row.teamId)}</td>
+                        <td className="sticky left-0 z-10 bg-white px-2.5 py-2.5 lg:p-3 font-bold text-slate-100 min-w-[96px]">{teamName(row.teamId)}</td>
                         <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-400">{row.played}</td>
                         <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-emerald-400">{row.wins}</td>
                         <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-red-400">{row.losses}</td>
@@ -3064,17 +3064,22 @@ export default function App() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <div className="overflow-x-auto bg-slate-900/30 rounded-xl lg:rounded-2xl border border-slate-800">
+                    <div className="overflow-auto max-h-[60vh] bg-slate-900/30 rounded-xl lg:rounded-2xl border border-slate-800">
                       <table className="w-full text-sm lg:text-xs">
                         <thead>
-                          <tr className="border-b border-slate-800 text-slate-500">
-                            <th className="text-left px-2 py-2.5 lg:p-3 font-bold">순위</th>
-                            <th className="text-left px-2.5 py-2.5 lg:p-3 font-bold">선수</th>
-                            <th className="text-right px-2 py-2.5 lg:p-3 font-bold">에이스</th>
-                            <th className="text-right px-2 py-2.5 lg:p-3 font-bold">스파이크</th>
-                            <th className="text-right px-2 py-2.5 lg:p-3 font-bold">블로킹</th>
-                            <th className="text-right px-2 py-2.5 lg:p-3 font-bold">수비</th>
-                            <th className="text-right px-2 py-2.5 lg:p-3 font-bold text-orange-500 whitespace-nowrap">득점기여</th>
+                          <tr className="text-slate-500">
+                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-left px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap">순위</th>
+                            <th className="sticky top-0 left-0 z-30 bg-white shadow-[0_1px_0_0_#e2e8f0] text-left px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[132px]">선수</th>
+                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[52px]">에이스</th>
+                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[92px]">서브 성공/시도</th>
+                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[68px]">서브 성공률</th>
+                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[100px]">스파이크 성공/시도</th>
+                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[80px]">스파이크 성공률</th>
+                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[52px]">블로킹</th>
+                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[52px]">리시브</th>
+                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[52px]">디그</th>
+                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[60px]">토스 도움</th>
+                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold text-orange-500 whitespace-nowrap min-w-[68px]">득점기여</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -3083,7 +3088,7 @@ export default function App() {
                               "border-b border-slate-800/50",
                               idx === 0 && "bg-orange-600/5"
                             )}>
-                              <td className="px-2 py-2.5 lg:p-3 font-black">
+                              <td className="px-2.5 py-2.5 lg:p-3 font-black">
                                 <span className={cn(
                                   "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs lg:text-[10px]",
                                   idx === 0 ? "bg-yellow-500 text-slate-900" :
@@ -3092,7 +3097,7 @@ export default function App() {
                                   "bg-slate-800 text-slate-400"
                                 )}>{idx + 1}</span>
                               </td>
-                              <td className="px-2.5 py-2.5 lg:p-3">
+                              <td className="sticky left-0 z-10 bg-white px-2.5 py-2.5 lg:p-3 min-w-[132px]">
                                 <div className="flex items-center gap-1.5 whitespace-nowrap">
                                   <span className="font-mono text-slate-500">{r.player.number}</span>
                                   <span className="font-bold text-base lg:text-sm text-slate-100">{r.player.name}</span>
@@ -3100,14 +3105,16 @@ export default function App() {
                                 </div>
                                 <div className="text-[11px] lg:text-[10px] text-slate-500">{r.teamName}</div>
                               </td>
-                              <td className="px-2 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.stats.serveAce}</td>
-                              <td
-                                className="px-2 py-2.5 lg:p-3 text-right font-mono text-slate-300"
-                                title={r.rates.spikeTotal > 0 ? `스파이크 ${r.stats.spikeSuccess}/${r.rates.spikeTotal} (${Math.round(r.rates.spikePct)}%)` : undefined}
-                              >{r.stats.spikeSuccess}</td>
-                              <td className="px-2 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.stats.block}</td>
-                              <td className="px-2 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.defense}</td>
-                              <td className="px-2 py-2.5 lg:p-3 text-right font-black font-mono text-orange-500 text-base lg:text-sm">{r.contribution}</td>
+                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.stats.serveAce}</td>
+                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-400 whitespace-nowrap">{r.rates.serveTotal > 0 ? `${r.stats.serveOk + r.stats.serveAce}/${r.rates.serveTotal}` : '-'}</td>
+                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.rates.serveTotal > 0 ? `${Math.round(r.rates.servePct)}%` : '-'}</td>
+                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-400 whitespace-nowrap">{r.rates.spikeTotal > 0 ? `${r.stats.spikeSuccess}/${r.rates.spikeTotal}` : '-'}</td>
+                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.rates.spikeTotal > 0 ? `${Math.round(r.rates.spikePct)}%` : '-'}</td>
+                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.stats.block}</td>
+                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.stats.receive}</td>
+                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.stats.dig}</td>
+                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.stats.setAssist}</td>
+                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-black font-mono text-orange-500 text-base lg:text-sm">{r.contribution}</td>
                             </tr>
                           ))}
                         </tbody>
