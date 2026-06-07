@@ -27,7 +27,8 @@ import {
   Wifi,
   WifiOff,
   Eye,
-  Copy
+  Copy,
+  BarChart3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
@@ -48,9 +49,10 @@ import { useFirebaseSync } from './lib/useFirebaseSync';
 import { useGameLogic } from './lib/useGameLogic';
 import { readScoreEvents } from './lib/cloudOps';
 import { useAuth, signInWithGoogle, signOut } from './lib/auth';
-import { 
-  deriveRates, 
+import {
+  deriveRates,
   aggregatePlayerStatsInGame,
+  aggregatePlayerStatsAllGames,
 } from './lib/stats';
 import {
   gasCreateRosterTemplate,
@@ -2855,6 +2857,31 @@ export default function App() {
     const standings = computeStandings(event, data.games);
     const progress = eventProgress(event, data.games);
 
+    // ── 개인 기록 집계 (이 대회에 연결된 게임만, 읽기 전용) ──────────────
+    const eventGameIds = new Set(
+      event.matches.map(m => m.gameId).filter(Boolean) as string[]
+    );
+    const eventGames = data.games.filter(g => eventGameIds.has(g.id));
+    const eventTeams = data.teams.filter(t => event.teamIds.includes(t.id));
+    const playerRecords = eventTeams.flatMap(t =>
+      (t.players ?? []).map(p => {
+        const stats = aggregatePlayerStatsAllGames(eventGames, p.id);
+        const rates = deriveRates(stats);
+        const contribution = stats.serveAce + stats.spikeSuccess + stats.block;
+        const defense = stats.receive + stats.dig;
+        const hasRecord = (Object.values(stats) as number[]).some(v => v > 0);
+        return { player: p, teamName: t.name, stats, rates, contribution, defense, hasRecord };
+      })
+    );
+    const recordedPlayers = playerRecords
+      .filter(r => r.hasRecord)
+      .sort((a, b) =>
+        b.contribution - a.contribution ||
+        b.stats.spikeSuccess - a.stats.spikeSuccess ||
+        a.player.name.localeCompare(b.player.name)
+      );
+    const noRecordPlayers = playerRecords.filter(r => !r.hasRecord);
+
     const startOrResumeMatch = (match: Match) => {
       // If match already has a game, resume it
       if (match.gameId) {
@@ -3023,6 +3050,75 @@ export default function App() {
                 * 승점: 승 = 3점, 패 = 0점 (무승부 없음)<br/>
                 * 동률 시: 세트 득실 → 세트 승수 → 득점 차
               </div>
+
+              {/* ── 개인 기록 ──────────────────────────────────── */}
+              <section className="space-y-3 pt-4">
+                <h2 className="text-base lg:text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <BarChart3 size={16} /> 개인 기록
+                </h2>
+
+                {recordedPlayers.length === 0 ? (
+                  <div className="text-center py-8 bg-slate-900/30 rounded-xl lg:rounded-lg border border-dashed border-slate-800">
+                    <p className="text-base lg:text-sm text-slate-500">아직 기록된 개인 스탯이 없습니다.</p>
+                    <p className="text-sm lg:text-[10px] text-slate-600 mt-1">경기를 진행하면 선수별 누적 기록이 표시됩니다.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {recordedPlayers.map((r, idx) => (
+                      <div key={r.player.id} className="bg-slate-900/30 p-4 lg:p-3 rounded-xl border border-slate-800/50">
+                        <div className="flex items-center justify-between gap-3 mb-2.5">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className={cn(
+                              "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs lg:text-[10px] font-black shrink-0",
+                              idx === 0 ? "bg-yellow-500 text-slate-900" :
+                              idx === 1 ? "bg-slate-400 text-slate-900" :
+                              idx === 2 ? "bg-orange-700 text-white" :
+                              "bg-slate-800 text-slate-400"
+                            )}>{idx + 1}</span>
+                            <div className="min-w-0">
+                              <div className="font-bold text-base lg:text-sm text-slate-100 truncate">
+                                <span className="font-mono text-slate-400 mr-1">{r.player.number}</span>{r.player.name}
+                                {r.player.isSetter && <span className="ml-1 text-[10px] font-black text-purple-400">S</span>}
+                              </div>
+                              <div className="text-xs lg:text-[10px] text-slate-500 truncate">{r.teamName}</div>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className="text-xl lg:text-lg font-black text-orange-500 font-mono leading-none">{r.contribution}</div>
+                            <div className="text-[10px] text-slate-500 mt-0.5">득점기여</div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {[
+                            { label: '에이스', val: r.stats.serveAce },
+                            { label: '스파이크', val: r.stats.spikeSuccess },
+                            { label: '블로킹', val: r.stats.block },
+                            { label: '수비', val: r.defense },
+                          ].map(c => (
+                            <div key={c.label} className="bg-slate-800/40 rounded-lg py-1.5 text-center">
+                              <div className="font-black font-mono text-base lg:text-sm text-slate-200 leading-none">{c.val}</div>
+                              <div className="text-[10px] text-slate-500 mt-1">{c.label}</div>
+                            </div>
+                          ))}
+                        </div>
+                        {(r.rates.spikeTotal > 0 || r.rates.serveTotal > 0 || r.stats.setAssist > 0) && (
+                          <div className="text-xs lg:text-[10px] text-slate-500 font-mono mt-2 flex flex-wrap gap-x-3 gap-y-0.5">
+                            {r.rates.spikeTotal > 0 && <span>스파이크 {r.stats.spikeSuccess}/{r.rates.spikeTotal} ({Math.round(r.rates.spikePct)}%)</span>}
+                            {r.rates.serveTotal > 0 && <span>서브 {r.stats.serveOk + r.stats.serveAce}/{r.rates.serveTotal} ({Math.round(r.rates.servePct)}%)</span>}
+                            {r.stats.setAssist > 0 && <span>토스도움 {r.stats.setAssist}</span>}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {noRecordPlayers.length > 0 && (
+                      <div className="text-xs lg:text-[10px] text-slate-600 leading-relaxed px-1 pt-1">
+                        기록 없음: {noRecordPlayers.map(r => `${r.player.name}(${r.teamName})`).join(', ')}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
             </div>
           )}
 
