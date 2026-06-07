@@ -944,12 +944,12 @@ const CourtPlayers = ({
 
 // ── Modal: pick action category ───────────────────────────────────────
 const CATEGORY_LABELS: Record<ActionCategory, { label: string; color: string }> = {
-  serve:   { label: '서브',     color: 'bg-blue-500/10 border-blue-400/40 text-blue-300' },
-  attack:  { label: '스파이크', color: 'bg-rose-500/10 border-rose-400/40 text-rose-300' },
-  defense: { label: '수비',     color: 'bg-teal-500/10 border-teal-400/40 text-teal-300' },
-  setter:  { label: '토스',     color: 'bg-violet-500/10 border-violet-400/40 text-violet-300' },
-  block:   { label: '블로킹',   color: 'bg-amber-500/10 border-amber-400/40 text-amber-300' },
-  error:   { label: '실책',     color: 'bg-pink-500/10 border-pink-400/40 text-pink-300' },
+  serve:   { label: '서브',     color: 'bg-blue-500/10 border-blue-400/40 text-slate-900' },
+  attack:  { label: '스파이크', color: 'bg-rose-500/10 border-rose-400/40 text-slate-900' },
+  defense: { label: '수비',     color: 'bg-teal-500/10 border-teal-400/40 text-slate-900' },
+  setter:  { label: '토스',     color: 'bg-violet-500/10 border-violet-400/40 text-slate-900' },
+  block:   { label: '블로킹',   color: 'bg-amber-500/10 border-amber-400/40 text-slate-900' },
+  error:   { label: '실책',     color: 'bg-pink-500/10 border-pink-400/40 text-slate-900' },
 };
 
 const CategoryPicker = ({
@@ -980,7 +980,7 @@ const CategoryPicker = ({
     {showSubstitute && onSubstitute && (
       <button
         onClick={onSubstitute}
-        className="w-full mt-2 py-3 rounded-xl font-bold text-sm text-emerald-300 bg-emerald-600/15 hover:bg-emerald-600/30 border border-emerald-600/30 active:scale-95 transition-all"
+        className="w-full mt-2 py-3 rounded-xl font-black text-sm text-slate-900 bg-emerald-600/15 hover:bg-emerald-600/30 border border-emerald-600/30 active:scale-95 transition-all"
       >
         🔄 교체
       </button>
