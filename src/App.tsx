@@ -364,11 +364,14 @@ const ScoreboardCard = ({
   currentSet,
   teamA,
   teamB,
+  setNav,
 }: {
   game: Game;
   currentSet: GameSet;
   teamA?: Team;
   teamB?: Team;
+  /** SET 박스 좌우 화살표(이전 세트 / 세트 종료·다음 세트). 데스크톱에서만 표시. */
+  setNav?: { onPrev?: () => void; canPrev?: boolean; onNext?: () => void; nextShort?: string; nextTitle?: string };
 }) => {
   const maxSets = game.maxSets ?? 1;
   const setTarget = game.setTarget ?? 25;
@@ -440,9 +443,21 @@ const ScoreboardCard = ({
       </div>
 
       {/* SET 카드 (가운데) — 모바일은 좁게, 데스크톱은 타워 컬럼 폭 */}
-      <div className="flex flex-col items-center justify-center self-stretch bg-slate-50 rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm w-14 lg:w-[240px] px-1 lg:px-0 shrink-0">
+      <div className="relative flex flex-col items-center justify-center self-stretch bg-slate-50 rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm w-14 lg:w-[240px] px-1 lg:px-0 shrink-0">
+        {/* 이전 세트 화살표 (좌) — 데스크톱, 이전 세트가 있을 때만 */}
+        {setNav?.canPrev && setNav.onPrev && (
+          <button onClick={setNav.onPrev} title="이전 세트" className="hidden lg:flex absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center rounded-lg bg-white border border-slate-300 text-slate-500 hover:bg-slate-100 transition-colors">
+            <ChevronLeft size={20} />
+          </button>
+        )}
         <div className="text-sm lg:text-4xl font-black text-slate-800 tracking-tight lg:tracking-wide leading-none whitespace-nowrap">SET {currentSet.number}</div>
         <div className="text-[8px] lg:text-xs font-bold text-slate-400 tracking-wider lg:tracking-[0.25em] mt-0.5 lg:mt-2 whitespace-nowrap">TO {setTarget}</div>
+        {/* 세트 종료 → 다음 세트(또는 결과) 화살표 (우) — 데스크톱 */}
+        {setNav?.onNext && (
+          <button onClick={setNav.onNext} title={setNav.nextTitle} className="hidden lg:flex absolute right-2 top-1/2 -translate-y-1/2 h-9 items-center gap-0.5 pl-2.5 pr-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md transition-colors whitespace-nowrap">
+            {setNav.nextShort}<ChevronRight size={18} />
+          </button>
+        )}
       </div>
 
       {/* AWAY 팀 카드 — 좌우 대칭: [큰 점수][세트점][AWAY 세로라벨] */}
@@ -493,7 +508,7 @@ const ScoreTowerVertical = ({
     color: 'orange' | 'blue'
   ) => (
     <div
-      className="grid grid-cols-2 gap-1"
+      className="grid grid-cols-2 gap-1 h-full"
       style={{ gridAutoFlow: 'column', gridTemplateRows: 'repeat(15, minmax(0, 1fr))' }}
     >
       {Array.from({ length: 30 }, (_, idx) => {
@@ -502,7 +517,7 @@ const ScoreTowerVertical = ({
           <div
             key={idx}
             className={cn(
-              "w-8 h-8 rounded-md flex items-center justify-center text-[11px] font-bold font-mono border-2",
+              "w-7 min-h-0 rounded-md flex items-center justify-center text-[10px] font-bold font-mono border-2",
               pt
                 ? color === 'orange'
                   ? "bg-orange-500 text-white border-orange-600 shadow-sm"
@@ -519,14 +534,14 @@ const ScoreTowerVertical = ({
   );
 
   return (
-    <div className="flex gap-3 justify-center items-start py-1">
-      <div className="flex flex-col items-center gap-1.5">
-        <div className="text-[10px] font-black text-orange-600 uppercase tracking-widest">HOME</div>
-        {renderTower(aPoints, 'orange')}
+    <div className="flex gap-3 justify-center items-stretch h-full w-full py-1">
+      <div className="flex flex-col items-center gap-1 h-full">
+        <div className="text-[10px] font-black text-orange-600 uppercase tracking-widest shrink-0">HOME</div>
+        <div className="flex-1 min-h-0">{renderTower(aPoints, 'orange')}</div>
       </div>
-      <div className="flex flex-col items-center gap-1.5">
-        <div className="text-[10px] font-black text-blue-600 uppercase tracking-widest">AWAY</div>
-        {renderTower(bPoints, 'blue')}
+      <div className="flex flex-col items-center gap-1 h-full">
+        <div className="text-[10px] font-black text-blue-600 uppercase tracking-widest shrink-0">AWAY</div>
+        <div className="flex-1 min-h-0">{renderTower(bPoints, 'blue')}</div>
       </div>
     </div>
   );
@@ -2376,7 +2391,15 @@ export default function App() {
 
         {/* 스코어보드 — 헤더 아래 고정(스크롤돼도 항상 보임) */}
         <div className="shrink-0 px-4 pt-4">
-          <ScoreboardCard game={game} currentSet={set} teamA={teamA} teamB={teamB} />
+          <ScoreboardCard game={game} currentSet={set} teamA={teamA} teamB={teamB}
+            setNav={(!readOnly && role === 'teacher' && maxSets > 1) ? {
+              canPrev: setId > 0,
+              onPrev: () => navigate('game-record', { setId: setId - 1 }),
+              onNext: endCurrentSet,
+              nextShort: matchDecided ? '결과' : `${setId + 2}세트`,
+              nextTitle: matchDecided ? '세트 종료 · 결과 보기' : `세트 종료 · ${setId + 2}세트로`,
+            } : undefined}
+          />
         </div>
 
         {/* 본문: 데스크톱 3열 / 모바일 1열. 명단은 컬럼 내부 스크롤 → 스코어보드·하단바 항상 보임 */}
@@ -2420,7 +2443,7 @@ export default function App() {
 
             {/* Center 득점 타워 + 컨트롤 — 데스크톱만, 항상 보임 (레퍼런스: 타워 아래 컨트롤) */}
             <div className="hidden lg:flex lg:w-[240px] shrink-0 flex-col min-h-0 gap-2">
-              <div className="bg-white rounded-2xl border border-slate-200 p-2 flex-1 overflow-y-auto flex items-start justify-center shadow-sm">
+              <div className="bg-white rounded-2xl border border-slate-200 p-2 flex-1 min-h-0 overflow-hidden flex items-stretch justify-center shadow-sm">
                 <ScoreTowerVertical scoreEvents={set.scoreEvents ?? []} teamA={teamA} teamB={teamB} />
               </div>
               {!readOnly && role === 'teacher' && (
@@ -2440,11 +2463,7 @@ export default function App() {
                       <Settings size={15} /> 경기설정
                     </button>
                   </div>
-                  {maxSets > 1 && (
-                    <button onClick={endCurrentSet} className="flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm transition-colors shadow-md whitespace-nowrap">
-                      <CheckCircle2 size={15} /> {matchDecided ? '세트 종료 · 결과 →' : `세트 종료 · ${setId + 2}세트 →`}
-                    </button>
-                  )}
+                  {/* 세트 종료(다음 세트)는 스코어보드 SET 박스 좌우 화살표로 이동 */}
                 </div>
               )}
             </div>
