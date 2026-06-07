@@ -767,7 +767,9 @@ const CourtPlayers = ({
   benchOpen?: boolean;
   onToggleBench?: () => void;
 }) => {
-  const serverId = courtIds[serverIdx % Math.max(courtIds.length, 1)];
+  // serverIdx 클램프(음수/초과/NaN 안전) — 교체·로테이션 후에도 코트 범위 내로.
+  const safeServerIdx = courtIds.length ? ((((serverIdx || 0) % courtIds.length) + courtIds.length) % courtIds.length) : 0;
+  const serverId = courtIds[safeServerIdx];
   const courtPlayers = courtIds.map(id => players.find(p => p.id === id)).filter(Boolean) as Player[];
   const benchPlayers = players.filter(p => !courtIds.includes(p.id));
   const [benchOpenLocal, setBenchOpenLocal] = useState(false);
@@ -1082,6 +1084,13 @@ const StatPill = ({ label, value, pct }: { label: string; value: string; pct: nu
   </div>
 );
 
+// RTDB/레거시 데이터가 배열을 키객체로 저장해도 배열로 복원(경기 소실 방지).
+function toArr(x: any): any[] {
+  if (Array.isArray(x)) return x;
+  if (x && typeof x === 'object') return Object.values(x);
+  return [];
+}
+
 // --- Main App Component ---
 
 export default function App() {
@@ -1115,28 +1124,24 @@ export default function App() {
       return {
         ...INITIAL_DATA,
         ...parsed,
-        events: parsed.events ?? [],
+        events: toArr(parsed.events),
         // 각 세트에 필수 필드 보강 — 옛/외부 주입 데이터에 playerStats·scoreEvents가
         // 없으면 통계 집계 시 앱 전체가 흰 화면으로 죽던 문제 방지.
-        games: Array.isArray(parsed.games)
-          ? parsed.games.map((g: any) => ({
-              ...g,
-              sets: Array.isArray(g.sets)
-                ? g.sets.map((s: any) => ({
-                    ...s,
-                    playerStats: s.playerStats ?? {},
-                    scoreEvents: Array.isArray(s.scoreEvents) ? s.scoreEvents : [],
-                    courtA: Array.isArray(s.courtA) ? s.courtA : [],
-                    courtB: Array.isArray(s.courtB) ? s.courtB : [],
-                  }))
-                : [],
-            }))
-          : [],
-        teams: Array.isArray(parsed.teams)
-          ? parsed.teams.map((t: any) => ({
+        games: toArr(parsed.games).map((g: any) => ({
+          ...g,
+          sets: toArr(g.sets).map((s: any) => ({
+            ...s,
+            playerStats: s.playerStats ?? {},
+            scoreEvents: toArr(s.scoreEvents),
+            courtA: toArr(s.courtA),
+            courtB: toArr(s.courtB),
+          })),
+        })),
+        teams: toArr(parsed.teams).length
+          ? toArr(parsed.teams).map((t: any) => ({
               id: t.id ?? generateId(),
               name: t.name ?? '팀',
-              players: Array.isArray(t.players) ? t.players : [],
+              players: toArr(t.players),
             }))
           : INITIAL_DATA.teams,
         criteria: parsed.criteria ?? INITIAL_DATA.criteria,
@@ -2133,7 +2138,7 @@ export default function App() {
             선택 순서가 서브 오더(로테이션)가 됩니다.
           </div>
 
-          <div className="grid grid-cols-2 gap-4 h-[calc(100%-60px)]">
+          <div className="grid grid-cols-2 gap-4">
             {[
               { team: 'A' as const, data: teamA, key: 'courtA' as const, color: 'text-orange-500', bg: 'bg-orange-600' },
               { team: 'B' as const, data: teamB, key: 'courtB' as const, color: 'text-blue-500', bg: 'bg-blue-600' }
@@ -2175,9 +2180,9 @@ export default function App() {
           </div>
         </main>
 
-        <footer className="p-6 bg-slate-950 border-t border-slate-900">
+        <footer className="shrink-0 sticky bottom-0 z-10 p-4 lg:p-6 bg-slate-950 border-t border-slate-900" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
           <Button variant="primary" size="lg" className="w-full" onClick={startMatch} icon={Play}>
-            경기 시작
+            경기 시작 ({set.courtA.length}/{game.courtN} · {set.courtB.length}/{game.courtN})
           </Button>
         </footer>
       </div>
@@ -3404,7 +3409,7 @@ export default function App() {
 
   // Game record view goes wide on desktop; other views stay phone-width
   // All views use wide container; inner max-width controls content width per view
-  const containerClass = "h-screen w-full max-w-6xl mx-auto bg-slate-950 shadow-2xl overflow-hidden relative";
+  const containerClass = "h-[100dvh] w-full max-w-6xl mx-auto bg-slate-950 shadow-2xl overflow-hidden relative";
 
   return (
     <div className={containerClass}>
