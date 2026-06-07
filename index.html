@@ -1,13 +1,37 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Spike Log Pro</title>
+    <meta name="description" content="배구 경기 기록 · 통계 앱 — Spike Log Pro" />
+
+    <!-- PWA manifest -->
+    <link rel="manifest" href="/volleyball/manifest.webmanifest" />
+    <meta name="theme-color" content="#2563eb" />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/svg+xml" href="/volleyball/icon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/volleyball/favicon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/volleyball/apple-touch-icon-180.png" />
+
+    <!-- iOS standalone -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Spike Log" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker
+            .register('/volleyball/sw.js', { scope: '/volleyball/' })
+            .catch(function (e) { console.warn('SW registration failed:', e); });
+        });
+      }
+    </script>
   </body>
 </html>
-
