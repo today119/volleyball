@@ -2419,30 +2419,30 @@ export default function App() {
             </div>
 
             {/* Center 득점 타워 + 컨트롤 — 데스크톱만, 항상 보임 (레퍼런스: 타워 아래 컨트롤) */}
-            <div className="hidden lg:flex lg:w-[240px] shrink-0 flex-col min-h-0 gap-3">
-              <div className="bg-white rounded-2xl border border-slate-200 p-3 flex-1 overflow-y-auto flex items-start justify-center shadow-sm">
+            <div className="hidden lg:flex lg:w-[240px] shrink-0 flex-col min-h-0 gap-2">
+              <div className="bg-white rounded-2xl border border-slate-200 p-2 flex-1 overflow-y-auto flex items-start justify-center shadow-sm">
                 <ScoreTowerVertical scoreEvents={set.scoreEvents ?? []} teamA={teamA} teamB={teamB} />
               </div>
               {!readOnly && role === 'teacher' && (
-                <div className="shrink-0 flex flex-col gap-2">
-                  <button onClick={undoLastScore} className="flex items-center justify-center gap-1.5 w-full px-4 py-2.5 rounded-xl bg-white border-2 border-orange-300 hover:bg-orange-50 text-orange-700 font-bold text-sm transition-colors">
-                    <RotateCcw size={16} /> 득점 취소
+                <div className="shrink-0 flex flex-col gap-1.5">
+                  <button onClick={undoLastScore} className="flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-xl bg-white border-2 border-orange-300 hover:bg-orange-50 text-orange-700 font-bold text-sm transition-colors whitespace-nowrap">
+                    <RotateCcw size={15} /> 득점 취소
                   </button>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button onClick={() => rotateServer(set.servingTeam, -1)} className="flex items-center justify-center gap-1 px-3 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors"><ChevronLeft size={16} /> 이전</button>
-                    <button onClick={() => rotateServer(set.servingTeam, 1)} className="flex items-center justify-center gap-1 px-3 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors">다음 <ChevronRight size={16} /></button>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button onClick={() => rotateServer(set.servingTeam, -1)} className="flex items-center justify-center gap-1 px-2 py-2 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors whitespace-nowrap"><ChevronLeft size={15} /> 이전</button>
+                    <button onClick={() => rotateServer(set.servingTeam, 1)} className="flex items-center justify-center gap-1 px-2 py-2 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors whitespace-nowrap">다음 <ChevronRight size={15} /></button>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button onClick={() => navigate('game-court', { setId })} className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors" title="코트 선수·서브 오더 다시 편성">
-                      <Users size={16} /> 코트 재편성
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button onClick={() => navigate('game-court', { setId })} className="flex items-center justify-center gap-1 px-2 py-2 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors whitespace-nowrap" title="코트 선수·서브 오더 다시 편성">
+                      <Users size={15} /> 코트편성
                     </button>
-                    <button onClick={() => setShowSettings(true)} className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors" title="인원수·세트수·목표점수 변경">
-                      <Settings size={16} /> 경기 설정
+                    <button onClick={() => setShowSettings(true)} className="flex items-center justify-center gap-1 px-2 py-2 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors whitespace-nowrap" title="인원수·세트수·목표점수 변경">
+                      <Settings size={15} /> 경기설정
                     </button>
                   </div>
                   {maxSets > 1 && (
-                    <button onClick={endCurrentSet} className="flex items-center justify-center gap-1.5 w-full px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm transition-colors shadow-md">
-                      <CheckCircle2 size={16} /> {matchDecided ? '세트 종료 · 결과 →' : `세트 종료 · ${setId + 2}세트 →`}
+                    <button onClick={endCurrentSet} className="flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm transition-colors shadow-md whitespace-nowrap">
+                      <CheckCircle2 size={15} /> {matchDecided ? '세트 종료 · 결과 →' : `세트 종료 · ${setId + 2}세트 →`}
                     </button>
                   )}
                 </div>
