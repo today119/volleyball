@@ -3064,52 +3064,55 @@ export default function App() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {recordedPlayers.map((r, idx) => (
-                      <div key={r.player.id} className="bg-slate-900/30 p-4 lg:p-3 rounded-xl border border-slate-800/50">
-                        <div className="flex items-center justify-between gap-3 mb-2.5">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <span className={cn(
-                              "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs lg:text-[10px] font-black shrink-0",
-                              idx === 0 ? "bg-yellow-500 text-slate-900" :
-                              idx === 1 ? "bg-slate-400 text-slate-900" :
-                              idx === 2 ? "bg-orange-700 text-white" :
-                              "bg-slate-800 text-slate-400"
-                            )}>{idx + 1}</span>
-                            <div className="min-w-0">
-                              <div className="font-bold text-base lg:text-sm text-slate-100 truncate">
-                                <span className="font-mono text-slate-400 mr-1">{r.player.number}</span>{r.player.name}
-                                {r.player.isSetter && <span className="ml-1 text-[10px] font-black text-purple-400">S</span>}
-                              </div>
-                              <div className="text-xs lg:text-[10px] text-slate-500 truncate">{r.teamName}</div>
-                            </div>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <div className="text-xl lg:text-lg font-black text-orange-500 font-mono leading-none">{r.contribution}</div>
-                            <div className="text-[10px] text-slate-500 mt-0.5">득점기여</div>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-4 gap-1.5">
-                          {[
-                            { label: '에이스', val: r.stats.serveAce },
-                            { label: '스파이크', val: r.stats.spikeSuccess },
-                            { label: '블로킹', val: r.stats.block },
-                            { label: '수비', val: r.defense },
-                          ].map(c => (
-                            <div key={c.label} className="bg-slate-800/40 rounded-lg py-1.5 text-center">
-                              <div className="font-black font-mono text-base lg:text-sm text-slate-200 leading-none">{c.val}</div>
-                              <div className="text-[10px] text-slate-500 mt-1">{c.label}</div>
-                            </div>
+                    <div className="overflow-x-auto bg-slate-900/30 rounded-xl lg:rounded-2xl border border-slate-800">
+                      <table className="w-full text-sm lg:text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-800 text-slate-500">
+                            <th className="text-left px-2 py-2.5 lg:p-3 font-bold">순위</th>
+                            <th className="text-left px-2.5 py-2.5 lg:p-3 font-bold">선수</th>
+                            <th className="text-right px-2 py-2.5 lg:p-3 font-bold">에이스</th>
+                            <th className="text-right px-2 py-2.5 lg:p-3 font-bold">스파이크</th>
+                            <th className="text-right px-2 py-2.5 lg:p-3 font-bold">블로킹</th>
+                            <th className="text-right px-2 py-2.5 lg:p-3 font-bold">수비</th>
+                            <th className="text-right px-2 py-2.5 lg:p-3 font-bold text-orange-500 whitespace-nowrap">득점기여</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recordedPlayers.map((r, idx) => (
+                            <tr key={r.player.id} className={cn(
+                              "border-b border-slate-800/50",
+                              idx === 0 && "bg-orange-600/5"
+                            )}>
+                              <td className="px-2 py-2.5 lg:p-3 font-black">
+                                <span className={cn(
+                                  "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs lg:text-[10px]",
+                                  idx === 0 ? "bg-yellow-500 text-slate-900" :
+                                  idx === 1 ? "bg-slate-400 text-slate-900" :
+                                  idx === 2 ? "bg-orange-700 text-white" :
+                                  "bg-slate-800 text-slate-400"
+                                )}>{idx + 1}</span>
+                              </td>
+                              <td className="px-2.5 py-2.5 lg:p-3">
+                                <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                  <span className="font-mono text-slate-500">{r.player.number}</span>
+                                  <span className="font-bold text-base lg:text-sm text-slate-100">{r.player.name}</span>
+                                  {r.player.isSetter && <span className="text-[10px] font-black text-purple-400">S</span>}
+                                </div>
+                                <div className="text-[11px] lg:text-[10px] text-slate-500">{r.teamName}</div>
+                              </td>
+                              <td className="px-2 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.stats.serveAce}</td>
+                              <td
+                                className="px-2 py-2.5 lg:p-3 text-right font-mono text-slate-300"
+                                title={r.rates.spikeTotal > 0 ? `스파이크 ${r.stats.spikeSuccess}/${r.rates.spikeTotal} (${Math.round(r.rates.spikePct)}%)` : undefined}
+                              >{r.stats.spikeSuccess}</td>
+                              <td className="px-2 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.stats.block}</td>
+                              <td className="px-2 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.defense}</td>
+                              <td className="px-2 py-2.5 lg:p-3 text-right font-black font-mono text-orange-500 text-base lg:text-sm">{r.contribution}</td>
+                            </tr>
                           ))}
-                        </div>
-                        {(r.rates.spikeTotal > 0 || r.rates.serveTotal > 0 || r.stats.setAssist > 0) && (
-                          <div className="text-xs lg:text-[10px] text-slate-500 font-mono mt-2 flex flex-wrap gap-x-3 gap-y-0.5">
-                            {r.rates.spikeTotal > 0 && <span>스파이크 {r.stats.spikeSuccess}/{r.rates.spikeTotal} ({Math.round(r.rates.spikePct)}%)</span>}
-                            {r.rates.serveTotal > 0 && <span>서브 {r.stats.serveOk + r.stats.serveAce}/{r.rates.serveTotal} ({Math.round(r.rates.servePct)}%)</span>}
-                            {r.stats.setAssist > 0 && <span>토스도움 {r.stats.setAssist}</span>}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                        </tbody>
+                      </table>
+                    </div>
 
                     {noRecordPlayers.length > 0 && (
                       <div className="text-xs lg:text-[10px] text-slate-600 leading-relaxed px-1 pt-1">
