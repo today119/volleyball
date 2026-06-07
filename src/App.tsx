@@ -1470,12 +1470,13 @@ export default function App() {
                           }}
                         >
                           <div className="flex items-center gap-2">
-                            <div className="flex-1 min-w-0 flex items-center gap-2">
-                              <span className="font-bold text-base lg:text-sm text-slate-200 truncate flex-1 text-right">{teamA?.name}</span>
+                            <span className="w-12 shrink-0" aria-hidden="true"></span>
+                            <div className="flex-1 min-w-0 flex items-center justify-center gap-2">
+                              <span className="font-black text-xl lg:text-base text-slate-200 truncate flex-1 text-right">{teamA?.name}</span>
                               <span className="font-mono font-black text-xl lg:text-lg text-orange-500 tabular-nums shrink-0">{lastSet?.scoreA ?? 0}</span>
-                              <span className="text-slate-500 text-sm shrink-0">:</span>
+                              <span className="text-slate-500 text-base shrink-0">:</span>
                               <span className="font-mono font-black text-xl lg:text-lg text-blue-500 tabular-nums shrink-0">{lastSet?.scoreB ?? 0}</span>
-                              <span className="font-bold text-base lg:text-sm text-slate-200 truncate flex-1 text-left">{teamB?.name}</span>
+                              <span className="font-black text-xl lg:text-base text-slate-200 truncate flex-1 text-left">{teamB?.name}</span>
                             </div>
                             <ChevronRight size={18} className="text-emerald-500 shrink-0" />
                             <button
@@ -1493,7 +1494,7 @@ export default function App() {
                               <Trash2 size={14} />
                             </button>
                           </div>
-                          <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-emerald-400">
+                          <div className="flex items-center justify-center gap-1 mt-1 text-[10px] font-bold text-emerald-400">
                             <span className="inline-block w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
                             LIVE · {game.date} · SET {game.sets.length}
                           </div>
@@ -1523,10 +1524,11 @@ export default function App() {
                           navigate('dashboard', { gameId: game.id });
                         }}>
                           <div className="flex items-center gap-2">
-                            <div className="flex-1 min-w-0 flex items-center gap-2">
-                              <span className="font-bold text-base lg:text-sm text-slate-200 truncate flex-1 text-right">{teamA?.name}</span>
-                              <span className="font-black text-orange-600 text-xs italic shrink-0">VS</span>
-                              <span className="font-bold text-base lg:text-sm text-slate-200 truncate flex-1 text-left">{teamB?.name}</span>
+                            <span className="w-12 shrink-0" aria-hidden="true"></span>
+                            <div className="flex-1 min-w-0 flex items-center justify-center gap-2">
+                              <span className="font-black text-xl lg:text-base text-slate-200 truncate flex-1 text-right">{teamA?.name}</span>
+                              <span className="font-black text-orange-600 text-sm italic shrink-0">VS</span>
+                              <span className="font-black text-xl lg:text-base text-slate-200 truncate flex-1 text-left">{teamB?.name}</span>
                             </div>
                             <ChevronRight size={18} className="text-slate-400 shrink-0" />
                             <button
@@ -1544,7 +1546,7 @@ export default function App() {
                               <Trash2 size={14} />
                             </button>
                           </div>
-                          <div className="text-[10px] font-bold text-slate-500 mt-1">{game.date}</div>
+                          <div className="text-[10px] font-bold text-slate-500 mt-1 text-center">{game.date}</div>
                         </Card>
                       );
                     })}
