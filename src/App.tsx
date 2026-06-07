@@ -1164,6 +1164,8 @@ export default function App() {
   // collab 동기화 setData 때마다 리마운트되는데, 로컬 useState면 탭이
   // 순위표로 초기화되어 '경기 일정'을 눌러도 튕기는 버그가 있었음.)
   const [eventDetailTab, setEventDetailTab] = useState<'standings' | 'matches'>('standings');
+  // 개인 기록 표 정렬 (표시용 클라이언트 상태) — 집계/데이터 미접촉. 동기화 리마운트에도 유지되도록 부모 state.
+  const [statSort, setStatSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'contribution', dir: 'desc' });
   // 경기 설정 폼 상태도 App 레벨로 — 중첩 뷰가 collab 리렌더로 리마운트되면
   // 로컬 useState가 초기화돼 "9인제/3전2선승 선택이 6인제/단판으로 되돌아가던" 버그 방지.
   const [gsTeamA, setGsTeamA] = useState('');
@@ -2872,14 +2874,80 @@ export default function App() {
         return { player: p, teamName: t.name, stats, rates, contribution, defense, hasRecord };
       })
     );
+    // ── 개인 기록 정렬 (헤더 클릭 → 표시용 정렬, 집계 로직 미접촉) ──────────
+    type Rec = (typeof playerRecords)[number];
+    const statValue = (r: Rec): number | string => {
+      switch (statSort.key) {
+        case 'name': return r.player.name;
+        case 'serveAce': return r.stats.serveAce;
+        case 'serveSuccess': return r.stats.serveOk + r.stats.serveAce;
+        case 'servePct': return r.rates.servePct;
+        case 'spikeSuccess': return r.stats.spikeSuccess;
+        case 'spikePct': return r.rates.spikePct;
+        case 'block': return r.stats.block;
+        case 'receive': return r.stats.receive;
+        case 'dig': return r.stats.dig;
+        case 'setAssist': return r.stats.setAssist;
+        case 'contribution':
+        default: return r.contribution;
+      }
+    };
+    const statTie = (r: Rec): number => {
+      switch (statSort.key) {
+        case 'serveSuccess':
+        case 'servePct': return r.rates.serveTotal;
+        case 'spikeSuccess':
+        case 'spikePct': return r.rates.spikeTotal;
+        case 'contribution': return r.stats.spikeSuccess;
+        default: return r.contribution;
+      }
+    };
+    const dirMul = statSort.dir === 'asc' ? 1 : -1;
     const recordedPlayers = playerRecords
       .filter(r => r.hasRecord)
-      .sort((a, b) =>
-        b.contribution - a.contribution ||
-        b.stats.spikeSuccess - a.stats.spikeSuccess ||
-        a.player.name.localeCompare(b.player.name)
-      );
+      .sort((a, b) => {
+        const va = statValue(a), vb = statValue(b);
+        let cmp: number;
+        if (typeof va === 'string' || typeof vb === 'string') {
+          cmp = String(va).localeCompare(String(vb), 'ko');
+        } else {
+          cmp = va - vb;
+        }
+        if (cmp !== 0) return dirMul * cmp;
+        const tie = statTie(b) - statTie(a); // 동률 시 시도수 많은 순
+        if (tie !== 0) return tie;
+        return a.player.name.localeCompare(b.player.name, 'ko');
+      });
     const noRecordPlayers = playerRecords.filter(r => !r.hasRecord);
+
+    const toggleStatSort = (k: string, isName = false) => {
+      setStatSort(prev => prev.key === k
+        ? { key: k, dir: prev.dir === 'desc' ? 'asc' : 'desc' }
+        : { key: k, dir: isName ? 'asc' : 'desc' });
+    };
+    const sortTh = (
+      label: string,
+      k: string,
+      opts: { minW?: string; accent?: boolean; name?: boolean } = {},
+    ) => {
+      const active = statSort.key === k;
+      const arrow = active ? (statSort.dir === 'desc' ? ' ▼' : ' ▲') : '';
+      return (
+        <th
+          key={k}
+          onClick={() => toggleStatSort(k, opts.name)}
+          aria-sort={active ? (statSort.dir === 'desc' ? 'descending' : 'ascending') : 'none'}
+          className={cn(
+            'sticky top-0 bg-white shadow-[0_1px_0_0_#e2e8f0] px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap cursor-pointer select-none transition-colors',
+            opts.name ? 'left-0 z-30 text-left' : 'z-20 text-right',
+            opts.minW,
+            active ? 'text-orange-600' : (opts.accent ? 'text-orange-500' : 'hover:text-slate-700'),
+          )}
+        >
+          {label}{arrow}
+        </th>
+      );
+    };
 
     const startOrResumeMatch = (match: Match) => {
       // If match already has a game, resume it
@@ -3068,17 +3136,17 @@ export default function App() {
                         <thead>
                           <tr className="text-slate-500">
                             <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-left px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap">순위</th>
-                            <th className="sticky top-0 left-0 z-30 bg-white shadow-[0_1px_0_0_#e2e8f0] text-left px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[132px]">선수</th>
-                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[52px]">에이스</th>
-                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[92px]">서브 성공/시도</th>
-                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[68px]">서브 성공률</th>
-                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[100px]">스파이크 성공/시도</th>
-                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[80px]">스파이크 성공률</th>
-                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[52px]">블로킹</th>
-                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[52px]">리시브</th>
-                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[52px]">디그</th>
-                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap min-w-[60px]">토스 도움</th>
-                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-right px-2.5 py-2.5 lg:p-3 font-bold text-orange-500 whitespace-nowrap min-w-[68px]">득점기여</th>
+                            {sortTh('선수', 'name', { name: true, minW: 'min-w-[132px]' })}
+                            {sortTh('에이스', 'serveAce', { minW: 'min-w-[52px]' })}
+                            {sortTh('서브 성공/시도', 'serveSuccess', { minW: 'min-w-[92px]' })}
+                            {sortTh('서브 성공률', 'servePct', { minW: 'min-w-[68px]' })}
+                            {sortTh('스파이크 성공/시도', 'spikeSuccess', { minW: 'min-w-[100px]' })}
+                            {sortTh('스파이크 성공률', 'spikePct', { minW: 'min-w-[80px]' })}
+                            {sortTh('블로킹', 'block', { minW: 'min-w-[52px]' })}
+                            {sortTh('리시브', 'receive', { minW: 'min-w-[52px]' })}
+                            {sortTh('디그', 'dig', { minW: 'min-w-[52px]' })}
+                            {sortTh('토스 도움', 'setAssist', { minW: 'min-w-[60px]' })}
+                            {sortTh('득점기여', 'contribution', { minW: 'min-w-[68px]', accent: true })}
                           </tr>
                         </thead>
                         <tbody>
