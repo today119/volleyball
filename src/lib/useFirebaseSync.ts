@@ -31,41 +31,44 @@ export interface SyncStatus {
 }
 
 /**
+ * RTDB는 배열을 0,1,2… 키 객체로 저장하고, 경로단위 update(예: games/<id>/…)가
+ * 섞이면 배열이 "키 객체"로 변질된다. 그때 Array.isArray로 버리면 경기가 통째로
+ * 사라져(흰 화면/데이터 소실처럼 보임) → 객체도 Object.values로 배열 복원한다.
+ */
+function toArr(x: any): any[] {
+  if (Array.isArray(x)) return x;
+  if (x && typeof x === 'object') return Object.values(x);
+  return [];
+}
+
+/**
  * Normalize remote data to handle missing/legacy fields.
  * Firebase may strip empty arrays or have data from older schema.
  */
 function normalizeData(raw: any): AppData {
+  raw = raw || {};
   return {
-    teams: Array.isArray(raw.teams)
-      ? raw.teams.map((t: any) => ({
-          id: t.id ?? `team_${Math.random()}`,
-          name: t.name ?? '팀',
-          players: Array.isArray(t.players) ? t.players : [],
-        }))
-      : [],
-    games: Array.isArray(raw.games)
-      ? raw.games.map((g: any) => ({
-          ...g,
-          // 세트 필수 필드 보강 — collab(원격) 데이터에 playerStats·scoreEvents가
-          // 없으면 통계 집계 시 화면이 죽거나 멈추던 문제 방지(로컬 로드와 동일 처리).
-          sets: Array.isArray(g.sets)
-            ? g.sets.map((s: any) => ({
-                ...s,
-                playerStats: s.playerStats ?? {},
-                scoreEvents: Array.isArray(s.scoreEvents) ? s.scoreEvents : [],
-                courtA: Array.isArray(s.courtA) ? s.courtA : [],
-                courtB: Array.isArray(s.courtB) ? s.courtB : [],
-              }))
-            : [],
-        }))
-      : [],
-    events: Array.isArray(raw.events)
-      ? raw.events.map((e: any) => ({
-          ...e,
-          teamIds: Array.isArray(e.teamIds) ? e.teamIds : [],
-          matches: Array.isArray(e.matches) ? e.matches : [],
-        }))
-      : [],
+    teams: toArr(raw.teams).map((t: any) => ({
+      id: t.id ?? `team_${Math.random()}`,
+      name: t.name ?? '팀',
+      players: toArr(t.players),
+    })),
+    // games/sets가 객체로 변질돼도 배열로 복원 — 경기 소실 방지.
+    games: toArr(raw.games).map((g: any) => ({
+      ...g,
+      sets: toArr(g.sets).map((s: any) => ({
+        ...s,
+        playerStats: s.playerStats ?? {},
+        scoreEvents: toArr(s.scoreEvents),
+        courtA: toArr(s.courtA),
+        courtB: toArr(s.courtB),
+      })),
+    })),
+    events: toArr(raw.events).map((e: any) => ({
+      ...e,
+      teamIds: toArr(e.teamIds),
+      matches: toArr(e.matches),
+    })),
     criteria: raw.criteria ?? {},
     gasUrl: raw.gasUrl ?? '',
     peerEvals: raw.peerEvals ?? {},
@@ -106,6 +109,8 @@ export function useFirebaseSync({
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 클라우드(원격)의 현재 게임 수 — 스냅샷마다 갱신. write 전 "줄어들면 차단" 가드에 사용.
   const lastRemoteGamesRef = useRef(0);
+  // 이 세션에서 관찰된 게임 수 최고치(로컬/원격) — 빈 게임으로의 파괴적 전체저장 차단용.
+  const everSeenGamesRef = useRef(0);
   // 마지막으로 반영/송신한 데이터의 정규화 JSON.
   // 원격 스냅샷·로컬 쓰기 양쪽에서 이 값과 비교해, 내용이 같으면 setData/write를 건너뛴다.
   // → 자기 쓰기가 echo로 돌아와도 무시 → "스냅샷→setData→write→echo→setData…" 피드백 루프 차단
@@ -134,6 +139,7 @@ export function useFirebaseSync({
       const remoteData = snapshot.val();
       // 원격 게임 수를 항상 최신으로 기록(채택 여부와 무관) — write 가드용.
       lastRemoteGamesRef.current = countGames(remoteData);
+      if (lastRemoteGamesRef.current > everSeenGamesRef.current) everSeenGamesRef.current = lastRemoteGamesRef.current;
 
       if (!hasInitialized.current) {
         // First snapshot — "콘텐츠 풍부함" 기준 머지 (타임스탬프 단독 신뢰 금지).
@@ -189,8 +195,15 @@ export function useFirebaseSync({
     // (빈/적은 로컬이 whole-tree set 으로 클라우드 games 를 통째로 덮어써 전부 날아가던 사고 차단.)
     // 게임 추가/통계 기록은 게임 수가 유지·증가하므로 통과. 게임 삭제만 막힘(안전 우선).
     const localGames = countGames(data);
+    if (localGames > everSeenGamesRef.current) everSeenGamesRef.current = localGames;
     if (localGames < lastRemoteGamesRef.current) {
       console.warn(`[firebase-sync] write BLOCKED — local games(${localGames}) < cloud games(${lastRemoteGamesRef.current}); 클라우드 보호.`);
+      return;
+    }
+    // 파괴 차단: 이전에 게임이 있었는데 지금 0개로 전체저장하려 하면 무조건 막는다.
+    // (배열↔객체 변질로 게임이 일시적으로 []로 읽혀도 클라우드를 비우지 않게.)
+    if (localGames === 0 && everSeenGamesRef.current > 0) {
+      console.warn(`[firebase-sync] write BLOCKED — empty games would wipe ${everSeenGamesRef.current} known game(s); 클라우드 보호.`);
       return;
     }
 

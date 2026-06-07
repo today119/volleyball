@@ -35,7 +35,19 @@ export function useGameLogic({
   // 자기(이 클라이언트)가 올린 득점 액션 스택 — undo 자기액션 한정용.
   const ownActions = useRef<Array<{ gameId: string; setIdx: number; scoreField: 'scoreA' | 'scoreB' | null; eventKey: string | null }>>([]);
 
-  const setPath = (gid: string, i: number) => `spikelog/${sessionId}/games/${gid}/sets/${i}`;
+  // 최신 data 참조(스테일 클로저 방지) — 경로 계산용.
+  const dataRef = useRef(data); dataRef.current = data;
+  /**
+   * RTDB의 games 는 위치 배열(키 0,1,2…)로 저장된다. 경로단위 쓰기를 게임ID 문자열로
+   * 보내면 배열이 키객체로 변질돼 다른 클라이언트가 경기를 통째로 잃는다(흰 화면/소실).
+   * → 항상 배열 인덱스로 쓴다(전체저장의 배열 직렬화와 정합).
+   */
+  const gameNodeKey = (gid: string): string => {
+    const idx = dataRef.current.games.findIndex(g => g.id === gid);
+    return idx >= 0 ? String(idx) : gid; // 못 찾으면(이론상 없음) id 폴백
+  };
+
+  const setPath = (gid: string, i: number) => `spikelog/${sessionId}/games/${gameNodeKey(gid)}/sets/${i}`;
 
   /** Op[]를 RTDB에 멀티패스 update로 적용. push는 key 생성 후 같은 update에 포함. */
   const applyOpsToRtdb = (gid: string, i: number, ops: Op[]): string | null => {
