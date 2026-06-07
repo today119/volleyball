@@ -1460,20 +1460,24 @@ export default function App() {
                       const teamB = data.teams.find(t => t.id === game.teamBId);
                       const lastSet = game.sets[game.sets.length - 1];
                       return (
-                        <Card 
-                          key={game.id} 
-                          className="p-5 lg:p-4 rounded-xl lg:rounded-2xl cursor-pointer hover:bg-slate-900 transition-colors border-emerald-600/30 bg-emerald-600/5"
+                        <Card
+                          key={game.id}
+                          className="p-3 lg:p-3.5 rounded-xl lg:rounded-2xl cursor-pointer hover:bg-slate-900 transition-colors border-emerald-600/30 bg-emerald-600/5"
                           onClick={() => {
                             setCurrentGameId(game.id);
                             // jump back into recording at last set
                             navigate('game-record', { setId: game.sets.length - 1 });
                           }}
                         >
-                          <div className="flex justify-between items-center mb-2">
-                            <div className="text-xs lg:text-[10px] font-bold text-emerald-400">
-                              <span className="inline-block w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1 animate-pulse"></span>
-                              LIVE · {game.date} · SET {game.sets.length}
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 min-w-0 flex items-center gap-2">
+                              <span className="font-bold text-base lg:text-sm text-slate-200 truncate flex-1 text-right">{teamA?.name}</span>
+                              <span className="font-mono font-black text-xl lg:text-lg text-orange-500 tabular-nums shrink-0">{lastSet?.scoreA ?? 0}</span>
+                              <span className="text-slate-500 text-sm shrink-0">:</span>
+                              <span className="font-mono font-black text-xl lg:text-lg text-blue-500 tabular-nums shrink-0">{lastSet?.scoreB ?? 0}</span>
+                              <span className="font-bold text-base lg:text-sm text-slate-200 truncate flex-1 text-left">{teamB?.name}</span>
                             </div>
+                            <ChevronRight size={18} className="text-emerald-500 shrink-0" />
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1484,23 +1488,15 @@ export default function App() {
                                 }));
                                 showToast('경기 삭제됨');
                               }}
-                              className="text-slate-600 hover:text-red-500 p-1"
+                              className="text-slate-600 hover:text-red-500 p-1 shrink-0"
                             >
                               <Trash2 size={14} />
                             </button>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1 text-right">
-                              <div className="font-bold text-xl lg:text-base text-slate-200">{teamA?.name}</div>
-                              <div className="text-3xl lg:text-2xl font-black text-orange-500 font-mono">{lastSet?.scoreA ?? 0}</div>
-                            </div>
-                            <div className="px-4 font-black text-slate-600 text-sm italic">:</div>
-                            <div className="flex-1 text-left">
-                              <div className="font-bold text-xl lg:text-base text-slate-200">{teamB?.name}</div>
-                              <div className="text-3xl lg:text-2xl font-black text-blue-500 font-mono">{lastSet?.scoreB ?? 0}</div>
-                            </div>
+                          <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-emerald-400">
+                            <span className="inline-block w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                            LIVE · {game.date} · SET {game.sets.length}
                           </div>
-                          <div className="text-xs lg:text-[10px] text-emerald-400 mt-2 text-center font-bold">탭하여 이어서 진행</div>
                         </Card>
                       );
                     })}
@@ -1522,12 +1518,17 @@ export default function App() {
                       const teamA = data.teams.find(t => t.id === game.teamAId);
                       const teamB = data.teams.find(t => t.id === game.teamBId);
                       return (
-                        <Card key={game.id} className="p-5 lg:p-4 rounded-xl lg:rounded-2xl cursor-pointer hover:bg-slate-900 transition-colors" onClick={() => {
+                        <Card key={game.id} className="p-3 lg:p-3.5 rounded-xl lg:rounded-2xl cursor-pointer hover:bg-slate-900 transition-colors" onClick={() => {
                           setCurrentGameId(game.id);
                           navigate('dashboard', { gameId: game.id });
                         }}>
-                          <div className="flex justify-between items-center">
-                            <div className="text-sm lg:text-[10px] font-bold text-slate-500 mb-1">{game.date}</div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 min-w-0 flex items-center gap-2">
+                              <span className="font-bold text-base lg:text-sm text-slate-200 truncate flex-1 text-right">{teamA?.name}</span>
+                              <span className="font-black text-orange-600 text-xs italic shrink-0">VS</span>
+                              <span className="font-bold text-base lg:text-sm text-slate-200 truncate flex-1 text-left">{teamB?.name}</span>
+                            </div>
+                            <ChevronRight size={18} className="text-slate-400 shrink-0" />
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1538,16 +1539,12 @@ export default function App() {
                                 }));
                                 showToast('경기 삭제됨');
                               }}
-                              className="text-slate-600 hover:text-red-500 p-1"
+                              className="text-slate-600 hover:text-red-500 p-1 shrink-0"
                             >
                               <Trash2 size={14} />
                             </button>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1 text-right font-bold text-xl lg:text-base text-slate-200">{teamA?.name}</div>
-                            <div className="px-4 font-black text-orange-600 text-xl lg:text-lg italic">VS</div>
-                            <div className="flex-1 text-left font-bold text-xl lg:text-base text-slate-200">{teamB?.name}</div>
-                          </div>
+                          <div className="text-[10px] font-bold text-slate-500 mt-1">{game.date}</div>
                         </Card>
                       );
                     })}
