@@ -435,8 +435,8 @@ const ScoreboardCard = ({
         {/* 세트 점 — 라벨 옆 */}
         {setDots('A')}
         {/* 팀명 — 데스크톱만 (모바일은 아래 토글에 팀명 있음) */}
-        <div className="hidden lg:flex lg:flex-1 lg:items-center pl-2 pr-3 py-3 min-w-0">
-          <span className="text-3xl sm:text-4xl font-black text-slate-900 truncate leading-tight">{teamA?.name}</span>
+        <div className="hidden lg:flex lg:flex-1 lg:items-center lg:justify-center px-3 py-3 min-w-0">
+          <span className="w-full text-center text-3xl sm:text-4xl font-black text-slate-900 truncate leading-tight">{teamA?.name}</span>
         </div>
         {/* 큰 점수 */}
         <div className={cn('flex-1 lg:flex-none flex items-center justify-center lg:justify-end py-2.5 lg:py-0 px-1 lg:pr-5 text-4xl lg:text-6xl font-black font-mono tabular-nums leading-none', servingA ? 'text-orange-500' : 'text-slate-800')}>
@@ -478,8 +478,8 @@ const ScoreboardCard = ({
           {currentSet.scoreB}
         </div>
         {/* 팀명 — 데스크톱만 */}
-        <div className="hidden lg:flex lg:flex-1 lg:items-center justify-end pr-1 pl-3 py-3 min-w-0">
-          <span className="text-3xl sm:text-4xl font-black text-slate-900 truncate leading-tight">{teamB?.name}</span>
+        <div className="hidden lg:flex lg:flex-1 lg:items-center lg:justify-center px-3 py-3 min-w-0">
+          <span className="w-full text-center text-3xl sm:text-4xl font-black text-slate-900 truncate leading-tight">{teamB?.name}</span>
         </div>
         {/* 세트 점 — 라벨 옆 */}
         {setDots('B')}
@@ -1103,6 +1103,154 @@ function toArr(x: any): any[] {
   return a.filter(Boolean);
 }
 
+interface StatRec {
+  player: Player;
+  teamName: string;
+  stats: PlayerStats;
+  rates: { serveTotal: number; servePct: number; spikeTotal: number; spikePct: number };
+  contribution: number;
+  hasRecord: boolean;
+}
+
+/** 개인 기록 테이블 — 대회 순위표 / 경기 결과 공용. 헤더 클릭 정렬 · sticky 헤더 · 가로 스크롤. */
+const IndividualStatsTable = ({
+  records, sort, setSort,
+}: {
+  records: StatRec[];
+  sort: { key: string; dir: 'asc' | 'desc' };
+  setSort: React.Dispatch<React.SetStateAction<{ key: string; dir: 'asc' | 'desc' }>>;
+}) => {
+  const statValue = (r: StatRec): number | string => {
+    switch (sort.key) {
+      case 'name': return r.player.name;
+      case 'serveAce': return r.stats.serveAce;
+      case 'serveSuccess': return r.stats.serveOk + r.stats.serveAce;
+      case 'servePct': return r.rates.servePct;
+      case 'spikeSuccess': return r.stats.spikeSuccess;
+      case 'spikePct': return r.rates.spikePct;
+      case 'block': return r.stats.block;
+      case 'receive': return r.stats.receive;
+      case 'dig': return r.stats.dig;
+      case 'setAssist': return r.stats.setAssist;
+      case 'contribution':
+      default: return r.contribution;
+    }
+  };
+  const statTie = (r: StatRec): number => {
+    switch (sort.key) {
+      case 'serveSuccess':
+      case 'servePct': return r.rates.serveTotal;
+      case 'spikeSuccess':
+      case 'spikePct': return r.rates.spikeTotal;
+      case 'contribution': return r.stats.spikeSuccess;
+      default: return r.contribution;
+    }
+  };
+  const dirMul = sort.dir === 'asc' ? 1 : -1;
+  const recordedPlayers = records
+    .filter(r => r.hasRecord)
+    .sort((a, b) => {
+      const va = statValue(a), vb = statValue(b);
+      let cmp: number;
+      if (typeof va === 'string' || typeof vb === 'string') cmp = String(va).localeCompare(String(vb), 'ko');
+      else cmp = va - vb;
+      if (cmp !== 0) return dirMul * cmp;
+      const tie = statTie(b) - statTie(a);
+      if (tie !== 0) return tie;
+      return a.player.name.localeCompare(b.player.name, 'ko');
+    });
+  const noRecordPlayers = records.filter(r => !r.hasRecord);
+  const toggle = (k: string, isName = false) => {
+    setSort(prev => prev.key === k
+      ? { key: k, dir: prev.dir === 'desc' ? 'asc' : 'desc' }
+      : { key: k, dir: isName ? 'asc' : 'desc' });
+  };
+  const sortTh = (label: string, k: string, opts: { minW?: string; accent?: boolean; name?: boolean } = {}) => {
+    const active = sort.key === k;
+    const arrow = active ? (sort.dir === 'desc' ? ' ▼' : ' ▲') : '';
+    return (
+      <th key={k} onClick={() => toggle(k, opts.name)}
+        aria-sort={active ? (sort.dir === 'desc' ? 'descending' : 'ascending') : 'none'}
+        className={cn(
+          'sticky top-0 bg-white shadow-[0_1px_0_0_#e2e8f0] px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap cursor-pointer select-none transition-colors',
+          opts.name ? 'left-0 z-30 text-left' : 'z-20 text-right',
+          opts.minW,
+          active ? 'text-orange-600' : (opts.accent ? 'text-orange-500' : 'hover:text-slate-700'),
+        )}
+      >{label}{arrow}</th>
+    );
+  };
+  if (recordedPlayers.length === 0) {
+    return (
+      <div className="text-center py-8 bg-slate-900/30 rounded-xl lg:rounded-lg border border-dashed border-slate-800">
+        <p className="text-base lg:text-sm text-slate-500">아직 기록된 개인 스탯이 없습니다.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      <div className="overflow-auto max-h-[60vh] bg-slate-900/30 rounded-xl lg:rounded-2xl border border-slate-800">
+        <table className="w-full text-sm lg:text-xs">
+          <thead>
+            <tr className="text-slate-500">
+              <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-left px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap">순위</th>
+              {sortTh('선수', 'name', { name: true, minW: 'min-w-[132px]' })}
+              {sortTh('에이스', 'serveAce', { minW: 'min-w-[52px]' })}
+              {sortTh('서브 성공/시도', 'serveSuccess', { minW: 'min-w-[92px]' })}
+              {sortTh('서브 성공률', 'servePct', { minW: 'min-w-[68px]' })}
+              {sortTh('스파이크 성공/시도', 'spikeSuccess', { minW: 'min-w-[100px]' })}
+              {sortTh('스파이크 성공률', 'spikePct', { minW: 'min-w-[80px]' })}
+              {sortTh('블로킹', 'block', { minW: 'min-w-[52px]' })}
+              {sortTh('리시브', 'receive', { minW: 'min-w-[52px]' })}
+              {sortTh('디그', 'dig', { minW: 'min-w-[52px]' })}
+              {sortTh('토스 도움', 'setAssist', { minW: 'min-w-[60px]' })}
+              {sortTh('득점기여', 'contribution', { minW: 'min-w-[68px]', accent: true })}
+            </tr>
+          </thead>
+          <tbody>
+            {recordedPlayers.map((r, idx) => (
+              <tr key={r.player.id} className={cn("border-b border-slate-800/50", idx === 0 && "bg-orange-600/5")}>
+                <td className="px-2.5 py-2.5 lg:p-3 font-black">
+                  <span className={cn(
+                    "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs lg:text-[10px]",
+                    idx === 0 ? "bg-yellow-500 text-slate-900" :
+                    idx === 1 ? "bg-slate-400 text-slate-900" :
+                    idx === 2 ? "bg-orange-700 text-white" :
+                    "bg-slate-800 text-slate-400"
+                  )}>{idx + 1}</span>
+                </td>
+                <td className="sticky left-0 z-10 bg-white px-2.5 py-2.5 lg:p-3 min-w-[132px]">
+                  <div className="flex items-center gap-1.5 whitespace-nowrap">
+                    <span className="font-mono text-slate-500">{r.player.number}</span>
+                    <span className="font-bold text-base lg:text-sm text-slate-100">{r.player.name}</span>
+                    {r.player.isSetter && <span className="text-[10px] font-black text-purple-400">S</span>}
+                  </div>
+                  <div className="text-[11px] lg:text-[10px] text-slate-500">{r.teamName}</div>
+                </td>
+                <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.stats.serveAce}</td>
+                <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-400 whitespace-nowrap">{r.rates.serveTotal > 0 ? `${r.stats.serveOk + r.stats.serveAce}/${r.rates.serveTotal}` : '-'}</td>
+                <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.rates.serveTotal > 0 ? `${Math.round(r.rates.servePct)}%` : '-'}</td>
+                <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-400 whitespace-nowrap">{r.rates.spikeTotal > 0 ? `${r.stats.spikeSuccess}/${r.rates.spikeTotal}` : '-'}</td>
+                <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.rates.spikeTotal > 0 ? `${Math.round(r.rates.spikePct)}%` : '-'}</td>
+                <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.stats.block}</td>
+                <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.stats.receive}</td>
+                <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.stats.dig}</td>
+                <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.stats.setAssist}</td>
+                <td className="px-2.5 py-2.5 lg:p-3 text-right font-black font-mono text-orange-500 text-base lg:text-sm">{r.contribution}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {noRecordPlayers.length > 0 && (
+        <div className="text-xs lg:text-[10px] text-slate-600 leading-relaxed px-1 pt-1">
+          기록 없음: {noRecordPlayers.map(r => `${r.player.name}(${r.teamName})`).join(', ')}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // --- Main App Component ---
 
 export default function App() {
@@ -1183,6 +1331,8 @@ export default function App() {
   const [eventDetailTab, setEventDetailTab] = useState<'standings' | 'matches'>('standings');
   // 개인 기록 표 정렬 (표시용 클라이언트 상태) — 집계/데이터 미접촉. 동기화 리마운트에도 유지되도록 부모 state.
   const [statSort, setStatSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'contribution', dir: 'desc' });
+  // 경기 결과(대시보드) 개인 기록 표 정렬 — 대회 표와 별도 상태.
+  const [dashStatSort, setDashStatSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'contribution', dir: 'desc' });
   // 경기 설정 폼 상태도 App 레벨로 — 중첩 뷰가 collab 리렌더로 리마운트되면
   // 로컬 useState가 초기화돼 "9인제/3전2선승 선택이 6인제/단판으로 되돌아가던" 버그 방지.
   const [gsTeamA, setGsTeamA] = useState('');
@@ -2224,7 +2374,7 @@ export default function App() {
                           className="flex-1 min-w-0 flex items-center gap-3 p-2.5 text-left"
                         >
                           <div className={cn(
-                            "w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0",
+                            "w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-black shrink-0",
                             isSelected ? t.bg + " text-white" : "bg-slate-700 text-slate-400"
                           )}>
                             {isSelected ? idx + 1 : player.number}
@@ -2758,34 +2908,19 @@ export default function App() {
             );
           })()}
 
-          <section className="space-y-4">
-            <h2 className="text-base lg:text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">선수별 통계 {(game.maxSets ?? 1) > 1 ? '(전체 세트)' : '(1세트)'}</h2>
-            <div className="space-y-2">
-              {[...(teamA?.players ?? []), ...(teamB?.players ?? [])].map(p => {
+          <section className="space-y-3">
+            <h2 className="text-base lg:text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2"><BarChart3 size={16} /> 개인 기록 {(game.maxSets ?? 1) > 1 ? '(전체 세트)' : '(1세트)'}</h2>
+            <IndividualStatsTable
+              records={[...(teamA?.players ?? []), ...(teamB?.players ?? [])].map(p => {
                 const stats = aggregatePlayerStatsInGame(game, p.id);
-                if (!Object.values(stats).some(v => v > 0)) return null;
                 const rates = deriveRates(stats);
-                const team = (teamA?.players ?? []).includes(p) ? 'A' : 'B';
-                return (
-                  <div key={p.id} className="bg-slate-900/30 p-4 lg:p-3 rounded-xl border border-slate-800/50">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className={cn(
-                          "w-2 h-2 rounded-full",
-                          team === 'A' ? "bg-orange-500" : "bg-blue-500"
-                        )} />
-                        <span className="text-sm lg:text-xs font-bold text-slate-300">{p.number} {p.name}</span>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 text-xs lg:text-[10px]">
-                      <StatPill label="서브" value={`${(stats.serveAce + stats.serveOk)}/${rates.serveTotal}`} pct={rates.servePct} />
-                      <StatPill label="공격" value={`${stats.spikeSuccess}/${rates.spikeTotal}`} pct={rates.spikePct} />
-                      <StatPill label="토스" value={`${stats.setSuccess + stats.setAssist}/${rates.setTotal}`} pct={rates.setEffective} />
-                    </div>
-                  </div>
-                );
+                const contribution = stats.serveAce + stats.spikeSuccess + stats.block;
+                const teamName = (teamA?.players ?? []).includes(p) ? (teamA?.name ?? '') : (teamB?.name ?? '');
+                return { player: p, teamName, stats, rates, contribution, hasRecord: Object.values(stats).some(v => v > 0) };
               })}
-            </div>
+              sort={dashStatSort}
+              setSort={setDashStatSort}
+            />
           </section>
         </main>
       </div>
@@ -2964,81 +3099,6 @@ export default function App() {
         return { player: p, teamName: t.name, stats, rates, contribution, defense, hasRecord };
       })
     );
-    // ── 개인 기록 정렬 (헤더 클릭 → 표시용 정렬, 집계 로직 미접촉) ──────────
-    type Rec = (typeof playerRecords)[number];
-    const statValue = (r: Rec): number | string => {
-      switch (statSort.key) {
-        case 'name': return r.player.name;
-        case 'serveAce': return r.stats.serveAce;
-        case 'serveSuccess': return r.stats.serveOk + r.stats.serveAce;
-        case 'servePct': return r.rates.servePct;
-        case 'spikeSuccess': return r.stats.spikeSuccess;
-        case 'spikePct': return r.rates.spikePct;
-        case 'block': return r.stats.block;
-        case 'receive': return r.stats.receive;
-        case 'dig': return r.stats.dig;
-        case 'setAssist': return r.stats.setAssist;
-        case 'contribution':
-        default: return r.contribution;
-      }
-    };
-    const statTie = (r: Rec): number => {
-      switch (statSort.key) {
-        case 'serveSuccess':
-        case 'servePct': return r.rates.serveTotal;
-        case 'spikeSuccess':
-        case 'spikePct': return r.rates.spikeTotal;
-        case 'contribution': return r.stats.spikeSuccess;
-        default: return r.contribution;
-      }
-    };
-    const dirMul = statSort.dir === 'asc' ? 1 : -1;
-    const recordedPlayers = playerRecords
-      .filter(r => r.hasRecord)
-      .sort((a, b) => {
-        const va = statValue(a), vb = statValue(b);
-        let cmp: number;
-        if (typeof va === 'string' || typeof vb === 'string') {
-          cmp = String(va).localeCompare(String(vb), 'ko');
-        } else {
-          cmp = va - vb;
-        }
-        if (cmp !== 0) return dirMul * cmp;
-        const tie = statTie(b) - statTie(a); // 동률 시 시도수 많은 순
-        if (tie !== 0) return tie;
-        return a.player.name.localeCompare(b.player.name, 'ko');
-      });
-    const noRecordPlayers = playerRecords.filter(r => !r.hasRecord);
-
-    const toggleStatSort = (k: string, isName = false) => {
-      setStatSort(prev => prev.key === k
-        ? { key: k, dir: prev.dir === 'desc' ? 'asc' : 'desc' }
-        : { key: k, dir: isName ? 'asc' : 'desc' });
-    };
-    const sortTh = (
-      label: string,
-      k: string,
-      opts: { minW?: string; accent?: boolean; name?: boolean } = {},
-    ) => {
-      const active = statSort.key === k;
-      const arrow = active ? (statSort.dir === 'desc' ? ' ▼' : ' ▲') : '';
-      return (
-        <th
-          key={k}
-          onClick={() => toggleStatSort(k, opts.name)}
-          aria-sort={active ? (statSort.dir === 'desc' ? 'descending' : 'ascending') : 'none'}
-          className={cn(
-            'sticky top-0 bg-white shadow-[0_1px_0_0_#e2e8f0] px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap cursor-pointer select-none transition-colors',
-            opts.name ? 'left-0 z-30 text-left' : 'z-20 text-right',
-            opts.minW,
-            active ? 'text-orange-600' : (opts.accent ? 'text-orange-500' : 'hover:text-slate-700'),
-          )}
-        >
-          {label}{arrow}
-        </th>
-      );
-    };
-
     const startOrResumeMatch = (match: Match) => {
       // If match already has a game, resume it
       if (match.gameId) {
@@ -3214,77 +3274,7 @@ export default function App() {
                   <BarChart3 size={16} /> 개인 기록
                 </h2>
 
-                {recordedPlayers.length === 0 ? (
-                  <div className="text-center py-8 bg-slate-900/30 rounded-xl lg:rounded-lg border border-dashed border-slate-800">
-                    <p className="text-base lg:text-sm text-slate-500">아직 기록된 개인 스탯이 없습니다.</p>
-                    <p className="text-sm lg:text-[10px] text-slate-600 mt-1">경기를 진행하면 선수별 누적 기록이 표시됩니다.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="overflow-auto max-h-[60vh] bg-slate-900/30 rounded-xl lg:rounded-2xl border border-slate-800">
-                      <table className="w-full text-sm lg:text-xs">
-                        <thead>
-                          <tr className="text-slate-500">
-                            <th className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0] text-left px-2.5 py-2.5 lg:p-3 font-bold whitespace-nowrap">순위</th>
-                            {sortTh('선수', 'name', { name: true, minW: 'min-w-[132px]' })}
-                            {sortTh('에이스', 'serveAce', { minW: 'min-w-[52px]' })}
-                            {sortTh('서브 성공/시도', 'serveSuccess', { minW: 'min-w-[92px]' })}
-                            {sortTh('서브 성공률', 'servePct', { minW: 'min-w-[68px]' })}
-                            {sortTh('스파이크 성공/시도', 'spikeSuccess', { minW: 'min-w-[100px]' })}
-                            {sortTh('스파이크 성공률', 'spikePct', { minW: 'min-w-[80px]' })}
-                            {sortTh('블로킹', 'block', { minW: 'min-w-[52px]' })}
-                            {sortTh('리시브', 'receive', { minW: 'min-w-[52px]' })}
-                            {sortTh('디그', 'dig', { minW: 'min-w-[52px]' })}
-                            {sortTh('토스 도움', 'setAssist', { minW: 'min-w-[60px]' })}
-                            {sortTh('득점기여', 'contribution', { minW: 'min-w-[68px]', accent: true })}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {recordedPlayers.map((r, idx) => (
-                            <tr key={r.player.id} className={cn(
-                              "border-b border-slate-800/50",
-                              idx === 0 && "bg-orange-600/5"
-                            )}>
-                              <td className="px-2.5 py-2.5 lg:p-3 font-black">
-                                <span className={cn(
-                                  "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs lg:text-[10px]",
-                                  idx === 0 ? "bg-yellow-500 text-slate-900" :
-                                  idx === 1 ? "bg-slate-400 text-slate-900" :
-                                  idx === 2 ? "bg-orange-700 text-white" :
-                                  "bg-slate-800 text-slate-400"
-                                )}>{idx + 1}</span>
-                              </td>
-                              <td className="sticky left-0 z-10 bg-white px-2.5 py-2.5 lg:p-3 min-w-[132px]">
-                                <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                  <span className="font-mono text-slate-500">{r.player.number}</span>
-                                  <span className="font-bold text-base lg:text-sm text-slate-100">{r.player.name}</span>
-                                  {r.player.isSetter && <span className="text-[10px] font-black text-purple-400">S</span>}
-                                </div>
-                                <div className="text-[11px] lg:text-[10px] text-slate-500">{r.teamName}</div>
-                              </td>
-                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.stats.serveAce}</td>
-                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-400 whitespace-nowrap">{r.rates.serveTotal > 0 ? `${r.stats.serveOk + r.stats.serveAce}/${r.rates.serveTotal}` : '-'}</td>
-                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.rates.serveTotal > 0 ? `${Math.round(r.rates.servePct)}%` : '-'}</td>
-                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-400 whitespace-nowrap">{r.rates.spikeTotal > 0 ? `${r.stats.spikeSuccess}/${r.rates.spikeTotal}` : '-'}</td>
-                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.rates.spikeTotal > 0 ? `${Math.round(r.rates.spikePct)}%` : '-'}</td>
-                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.stats.block}</td>
-                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.stats.receive}</td>
-                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.stats.dig}</td>
-                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-mono text-slate-300">{r.stats.setAssist}</td>
-                              <td className="px-2.5 py-2.5 lg:p-3 text-right font-black font-mono text-orange-500 text-base lg:text-sm">{r.contribution}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {noRecordPlayers.length > 0 && (
-                      <div className="text-xs lg:text-[10px] text-slate-600 leading-relaxed px-1 pt-1">
-                        기록 없음: {noRecordPlayers.map(r => `${r.player.name}(${r.teamName})`).join(', ')}
-                      </div>
-                    )}
-                  </div>
-                )}
+<IndividualStatsTable records={playerRecords} sort={statSort} setSort={setStatSort} />
               </section>
             </div>
           )}
