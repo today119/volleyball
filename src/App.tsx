@@ -402,8 +402,10 @@ const ScoreboardCard = ({
   };
 
   void renderDots; // (구 다크 스코어보드용 — 라이트 3카드로 교체됨)
-  const servingA = currentSet.servingTeam === 'A';
-  const servingB = currentSet.servingTeam === 'B';
+  // 첫 서브 전(서브 기록 0)이면 서버 표시를 중립으로(어느 팀도 서빙 표시 안 함).
+  const firstServeDone = Object.values(currentSet.playerStats ?? {}).some((st: any) => ((st?.serveOk || 0) + (st?.serveAce || 0) + (st?.serveFail || 0)) > 0);
+  const servingA = firstServeDone && currentSet.servingTeam === 'A';
+  const servingB = firstServeDone && currentSet.servingTeam === 'B';
 
   // 세트 점(딴 세트 수) — 라벨 옆 세로 스택. 모바일·데스크톱 공통(스케치: HOME옆 점들)
   const setDots = (team: 'A' | 'B') => {
@@ -2162,6 +2164,18 @@ export default function App() {
       }));
     };
 
+    // 세터 지정/해제 — 로스터(team.players)의 isSetter 토글(기존 데이터 모델 그대로).
+    // → 경기 중 S 뱃지·토스(어시스트) 집계가 자동 연동된다.
+    const toggleCourtSetter = (pid: string) => {
+      setData(prev => ({
+        ...prev,
+        teams: prev.teams.map(tm => ({
+          ...tm,
+          players: (tm.players ?? []).map(pl => pl.id === pid ? { ...pl, isSetter: !pl.isSetter } : pl),
+        })),
+      }));
+    };
+
     const startMatch = () => {
       if (cleanCourt.courtA.length < game.courtN || cleanCourt.courtB.length < game.courtN) {
         alert(`각 팀당 ${game.courtN}명의 선수를 선택해야 합니다.`);
@@ -2180,7 +2194,7 @@ export default function App() {
         <main className="flex-1 overflow-y-auto p-4 space-y-6 min-h-0">
           <div className="max-w-4xl mx-auto space-y-6 pb-6">
           <div className="bg-orange-600/10 border border-orange-600/20 p-3 rounded-2xl text-[11px] text-orange-500 font-bold text-center">
-            선택 순서가 서브 오더(로테이션)가 됩니다.
+            선택 순서가 서브 오더(로테이션)가 됩니다 · 코트 선수의 <span className="font-black text-purple-300">세터</span> 버튼으로 세터 지정.
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -2198,24 +2212,41 @@ export default function App() {
                     const idx = cleanCourt[t.key].indexOf(player.id);
                     const isSelected = idx !== -1;
                     return (
-                      <button 
+                      <div
                         key={player.id}
-                        onClick={() => togglePlayer(t.team, player.id)}
                         className={cn(
-                          "w-full flex items-center gap-3 p-2.5 rounded-xl border transition-all text-left",
+                          "w-full flex items-center rounded-xl border transition-all",
                           isSelected ? `border-slate-600 bg-slate-800` : "border-slate-800 bg-slate-900/30 opacity-60"
                         )}
                       >
-                        <div className={cn(
-                          "w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black",
-                          isSelected ? t.bg + " text-white" : "bg-slate-700 text-slate-400"
-                        )}>
-                          {isSelected ? idx + 1 : player.number}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-bold truncate">{player.name}</div>
-                        </div>
-                      </button>
+                        <button
+                          onClick={() => togglePlayer(t.team, player.id)}
+                          className="flex-1 min-w-0 flex items-center gap-3 p-2.5 text-left"
+                        >
+                          <div className={cn(
+                            "w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0",
+                            isSelected ? t.bg + " text-white" : "bg-slate-700 text-slate-400"
+                          )}>
+                            {isSelected ? idx + 1 : player.number}
+                          </div>
+                          <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                            <div className="text-xs font-bold truncate">{player.name}</div>
+                            {player.isSetter && <span className="shrink-0 text-[8px] font-black bg-purple-600 text-white px-1 rounded">S</span>}
+                          </div>
+                        </button>
+                        {isSelected && (
+                          <button
+                            onClick={() => toggleCourtSetter(player.id)}
+                            title={player.isSetter ? '세터 해제' : '세터로 지정'}
+                            className={cn(
+                              "shrink-0 mr-2 px-2 py-1 rounded-lg text-[10px] font-black border transition-colors",
+                              player.isSetter ? "bg-purple-600 border-purple-500 text-white" : "bg-slate-700/60 border-slate-600 text-slate-300 hover:bg-slate-600"
+                            )}
+                          >
+                            세터
+                          </button>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
@@ -2244,7 +2275,7 @@ export default function App() {
     const teamA = data.teams.find(t => t.id === game.teamAId);
     const teamB = data.teams.find(t => t.id === game.teamBId);
 
-    const { recordAction, undoLastScore, adjustStat, rotateServer, substitute, setFirstServer } = useGameLogic({
+    const { recordAction, undoLastScore, adjustStat, rotateServer, substitute } = useGameLogic({
       data,
       setData,
       currentGame: game,
@@ -2295,24 +2326,12 @@ export default function App() {
       team: 'A' | 'B';
     } | null>(null);
 
-    // 첫 서버 지정 모드 — 켜져 있으면 코트 선수 탭이 "기록"이 아니라 "첫 서버 지정"으로 동작.
-    const [pickingServer, setPickingServer] = useState(false);
-    // 세트 시작 여부(점수·득점 이벤트 있으면 진행 중) — 첫 서브 안내 노출 판단용.
-    const setStarted = set.scoreA > 0 || set.scoreB > 0 || readScoreEvents(set.scoreEvents).length > 0;
+
+    // 첫 서브 전이면 서버 인디케이터 중립(표시 안 함).
+    const firstServeDone = Object.values(set.playerStats ?? {}).some((st: any) => ((st?.serveOk || 0) + (st?.serveAce || 0) + (st?.serveFail || 0)) > 0);
 
     const handlePlayerTap = (team: 'A' | 'B', playerId: string) => {
       if (readOnly) return;
-      // 첫 서버 지정 모드: 탭한 코트 선수를 첫 서버로 설정(서빙팀+서버위치) 후 모드 종료.
-      if (pickingServer) {
-        const courtIds = team === 'A' ? set.courtA : set.courtB;
-        const idx = courtIds.indexOf(playerId);
-        if (idx === -1) return; // 코트에 없는 선수는 서버가 될 수 없음
-        setFirstServer(team, idx);
-        setPickingServer(false);
-        const p = (team === 'A' ? teamA : teamB)?.players.find(pp => pp.id === playerId);
-        showToast(`첫 서브: ${p?.number ?? ''} ${p?.name ?? ''}`.trim());
-        return;
-      }
       // If only one category allowed, skip the picker
       if (allowedCategories.length === 1) {
         setPendingAction({ playerId, team, category: allowedCategories[0] });
@@ -2463,39 +2482,6 @@ export default function App() {
           />
         </div>
 
-        {/* 첫 서브 지정 바 — 세트 시작 전(또는 지정 모드 중)에만. 첫 서브 팀/선수를 사용자가 직접 고른다. */}
-        {!readOnly && role === 'teacher' && (!setStarted || pickingServer) && (() => {
-          const sCourt = set.servingTeam === 'A' ? (set.courtA ?? []) : (set.courtB ?? []);
-          const sTeamObj = set.servingTeam === 'A' ? teamA : teamB;
-          const sIdx = sCourt.length ? ((((set.servingTeam === 'A' ? set.serverIdxA : set.serverIdxB) || 0) % sCourt.length) + sCourt.length) % sCourt.length : 0;
-          const serverP = sTeamObj?.players.find(p => p.id === sCourt[sIdx]);
-          return (
-            <div className="shrink-0 px-4 pt-2">
-              <div className={cn(
-                'flex items-center justify-between gap-2 rounded-xl border px-3 py-2',
-                pickingServer ? 'bg-amber-500/15 border-amber-500/40' : 'bg-slate-900 border-slate-800'
-              )}>
-                <div className="flex items-center gap-2 min-w-0 text-xs lg:text-sm">
-                  <span className="shrink-0">🏐</span>
-                  {pickingServer ? (
-                    <span className="font-bold text-amber-300 truncate">첫 서브할 선수를 코트에서 탭하세요</span>
-                  ) : (
-                    <span className="text-slate-300 truncate">
-                      첫 서브 <span className="font-black text-white">{sTeamObj?.name ?? (set.servingTeam === 'A' ? '홈' : '어웨이')}</span>
-                      {serverP && <span className="font-bold text-slate-300"> · {serverP.number} {serverP.name}</span>}
-                    </span>
-                  )}
-                </div>
-                {pickingServer ? (
-                  <button onClick={() => setPickingServer(false)} className="shrink-0 px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs transition-colors">취소</button>
-                ) : (
-                  <button onClick={() => setPickingServer(true)} className="shrink-0 px-2.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs transition-colors whitespace-nowrap">첫 서브 지정</button>
-                )}
-              </div>
-            </div>
-          );
-        })()}
-
         {/* 본문: 데스크톱 3열 / 모바일 1열. 명단은 컬럼 내부 스크롤 → 스코어보드·하단바 항상 보임 */}
         <main className="flex-1 overflow-hidden p-4 pt-3">
           <div className="flex flex-col lg:flex-row gap-4 h-full">
@@ -2525,7 +2511,7 @@ export default function App() {
                 players={teamA?.players ?? []}
                 courtIds={set.courtA}
                 serverIdx={set.serverIdxA}
-                isServing={set.servingTeam === 'A'}
+                isServing={firstServeDone && set.servingTeam === 'A'}
                 stats={set.playerStats ?? {}}
                 onTap={(pid) => handlePlayerTap('A', pid)}
                 onBenchTap={(pid) => setPendingSub({ benchId: pid, team: 'A' })}
@@ -2570,7 +2556,7 @@ export default function App() {
                 players={teamB?.players ?? []}
                 courtIds={set.courtB}
                 serverIdx={set.serverIdxB}
-                isServing={set.servingTeam === 'B'}
+                isServing={firstServeDone && set.servingTeam === 'B'}
                 stats={set.playerStats ?? {}}
                 onTap={(pid) => handlePlayerTap('B', pid)}
                 onBenchTap={(pid) => setPendingSub({ benchId: pid, team: 'B' })}
