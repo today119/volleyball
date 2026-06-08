@@ -899,7 +899,7 @@ const CourtPlayers = ({
         </div>
         {p.position && (
           <span className={cn(
-            "shrink-0 ml-2 px-2 py-1 rounded-lg text-[10px] font-black whitespace-nowrap",
+            "shrink-0 ml-2 inline-flex items-center justify-center min-w-[72px] px-2 py-1 rounded-lg text-base font-black whitespace-nowrap text-center",
             isServer ? "bg-white/25 text-white" : isCourt ? "bg-slate-200 text-slate-700" : "bg-slate-100 text-slate-500"
           )}>{p.position}</span>
         )}
@@ -2372,6 +2372,13 @@ export default function App() {
                   {(t.data?.players ?? []).map(player => {
                     const idx = cleanCourt[t.key].indexOf(player.id);
                     const isSelected = idx !== -1;
+                    // 같은 팀 코트에서 다른 선수가 이미 쓴 포지션은 제외(중복 방지). 내 현재 포지션은 유지.
+                    const usedPositions = new Set(
+                      (t.data?.players ?? [])
+                        .filter(pp => pp.id !== player.id && cleanCourt[t.key].includes(pp.id) && pp.position)
+                        .map(pp => pp.position)
+                    );
+                    const availablePositions = positionOptions.filter(pos => !usedPositions.has(pos) || pos === player.position);
                     return (
                       <div
                         key={player.id}
@@ -2401,12 +2408,12 @@ export default function App() {
                             onChange={(e) => setCourtPosition(player.id, e.target.value)}
                             title="포지션 지정"
                             className={cn(
-                              "shrink-0 mr-1.5 max-w-[86px] text-[11px] font-bold rounded-lg border px-1.5 py-1 focus:outline-none cursor-pointer",
+                              "shrink-0 mr-1.5 w-[92px] text-center text-sm font-bold rounded-lg border px-1.5 py-1 focus:outline-none cursor-pointer",
                               player.position ? "bg-purple-600 border-purple-500 text-white" : "bg-slate-700/70 border-slate-600 text-slate-300"
                             )}
                           >
                             <option value="">포지션</option>
-                            {positionOptions.map(pos => <option key={pos} value={pos}>{pos}</option>)}
+                            {availablePositions.map(pos => <option key={pos} value={pos}>{pos}</option>)}
                           </select>
                         )}
                       </div>
