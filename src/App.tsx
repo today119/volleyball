@@ -897,6 +897,12 @@ const CourtPlayers = ({
             </div>
           )}
         </div>
+        {p.position && (
+          <span className={cn(
+            "shrink-0 ml-2 px-2 py-1 rounded-lg text-[10px] font-black whitespace-nowrap",
+            isServer ? "bg-white/25 text-white" : isCourt ? "bg-slate-200 text-slate-700" : "bg-slate-100 text-slate-500"
+          )}>{p.position}</span>
+        )}
       </button>
     );
   };
@@ -2314,14 +2320,19 @@ export default function App() {
       }));
     };
 
-    // 세터 지정/해제 — 로스터(team.players)의 isSetter 토글(기존 데이터 모델 그대로).
-    // → 경기 중 S 뱃지·토스(어시스트) 집계가 자동 연동된다.
-    const toggleCourtSetter = (pid: string) => {
+    // 인원제별 포지션 라벨.
+    const POSITIONS_9 = ['세터', '레프트', '라이트', '센터', '앞차', '백차', '센터백', '레프트백', '라이트백'];
+    const POSITIONS_6 = ['레프트', '라이트', '세터', '리베로'];
+    const positionOptions = (game.courtN >= 7 ? POSITIONS_9 : POSITIONS_6);
+
+    // 포지션 지정 — 로스터(team.players)의 position 저장 + 세터면 isSetter 동기화.
+    // → 경기 중 S 뱃지·토스(어시스트) 집계가 isSetter 기준으로 그대로 연동된다.
+    const setCourtPosition = (pid: string, pos: string) => {
       setData(prev => ({
         ...prev,
         teams: prev.teams.map(tm => ({
           ...tm,
-          players: (tm.players ?? []).map(pl => pl.id === pid ? { ...pl, isSetter: !pl.isSetter } : pl),
+          players: (tm.players ?? []).map(pl => pl.id === pid ? { ...pl, position: pos || undefined, isSetter: pos === '세터' } : pl),
         })),
       }));
     };
@@ -2343,8 +2354,8 @@ export default function App() {
 
         <main className="flex-1 overflow-y-auto p-4 space-y-6 min-h-0">
           <div className="max-w-4xl mx-auto space-y-6 pb-6">
-          <div className="bg-orange-600/10 border border-orange-600/20 p-3 rounded-2xl text-[11px] text-orange-500 font-bold text-center">
-            선택 순서가 서브 오더(로테이션)가 됩니다 · 코트 선수의 <span className="font-black text-purple-300">세터</span> 버튼으로 세터 지정.
+          <div className="bg-orange-600/10 border border-orange-600/20 px-3 py-2 rounded-xl text-[11px] text-orange-500 font-bold text-center">
+            선택 순서 = 서브 오더 · 우측 <span className="font-black text-purple-300">포지션</span> 지정(세터 선택 시 S·토스 연동)
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -2352,12 +2363,12 @@ export default function App() {
               { team: 'A' as const, data: teamA, key: 'courtA' as const, color: 'text-orange-500', bg: 'bg-orange-600' },
               { team: 'B' as const, data: teamB, key: 'courtB' as const, color: 'text-blue-500', bg: 'bg-blue-600' }
             ].map(t => (
-              <div key={t.team} className="flex flex-col space-y-3">
+              <div key={t.team} className="flex flex-col space-y-2">
                 <div className="flex justify-between items-center px-1">
                   <h3 className={cn("text-xs font-black uppercase tracking-widest", t.color)}>{t.data?.name}</h3>
                   <span className="text-[10px] font-bold text-slate-500">{cleanCourt[t.key].length}/{game.courtN}</span>
                 </div>
-                <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
                   {(t.data?.players ?? []).map(player => {
                     const idx = cleanCourt[t.key].indexOf(player.id);
                     const isSelected = idx !== -1;
@@ -2371,30 +2382,32 @@ export default function App() {
                       >
                         <button
                           onClick={() => togglePlayer(t.team, player.id)}
-                          className="flex-1 min-w-0 flex items-center gap-3 p-2.5 text-left"
+                          className="flex-1 min-w-0 flex items-center gap-2.5 py-1 px-2 text-left"
                         >
                           <div className={cn(
-                            "w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-black shrink-0",
+                            "w-11 h-11 rounded-xl flex items-center justify-center text-xl font-black shrink-0",
                             isSelected ? t.bg + " text-white" : "bg-slate-700 text-slate-400"
                           )}>
                             {isSelected ? idx + 1 : player.number}
                           </div>
                           <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                            <div className="text-xs font-bold truncate">{player.name}</div>
-                            {player.isSetter && <span className="shrink-0 text-[8px] font-black bg-purple-600 text-white px-1 rounded">S</span>}
+                            <div className="text-lg font-bold truncate leading-tight">{player.name}</div>
+                            {player.isSetter && <span className="shrink-0 text-[9px] font-black bg-purple-600 text-white px-1 rounded">S</span>}
                           </div>
                         </button>
                         {isSelected && (
-                          <button
-                            onClick={() => toggleCourtSetter(player.id)}
-                            title={player.isSetter ? '세터 해제' : '세터로 지정'}
+                          <select
+                            value={player.position ?? ''}
+                            onChange={(e) => setCourtPosition(player.id, e.target.value)}
+                            title="포지션 지정"
                             className={cn(
-                              "shrink-0 mr-2 px-2 py-1 rounded-lg text-[10px] font-black border transition-colors",
-                              player.isSetter ? "bg-purple-600 border-purple-500 text-white" : "bg-slate-700/60 border-slate-600 text-slate-300 hover:bg-slate-600"
+                              "shrink-0 mr-1.5 max-w-[86px] text-[11px] font-bold rounded-lg border px-1.5 py-1 focus:outline-none cursor-pointer",
+                              player.position ? "bg-purple-600 border-purple-500 text-white" : "bg-slate-700/70 border-slate-600 text-slate-300"
                             )}
                           >
-                            세터
-                          </button>
+                            <option value="">포지션</option>
+                            {positionOptions.map(pos => <option key={pos} value={pos}>{pos}</option>)}
+                          </select>
                         )}
                       </div>
                     );
@@ -2908,20 +2921,29 @@ export default function App() {
             );
           })()}
 
-          <section className="space-y-3">
-            <h2 className="text-base lg:text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2"><BarChart3 size={16} /> 개인 기록 {(game.maxSets ?? 1) > 1 ? '(전체 세트)' : '(1세트)'}</h2>
-            <IndividualStatsTable
-              records={[...(teamA?.players ?? []), ...(teamB?.players ?? [])].map(p => {
-                const stats = aggregatePlayerStatsInGame(game, p.id);
-                const rates = deriveRates(stats);
-                const contribution = stats.serveAce + stats.spikeSuccess + stats.block;
-                const teamName = (teamA?.players ?? []).includes(p) ? (teamA?.name ?? '') : (teamB?.name ?? '');
-                return { player: p, teamName, stats, rates, contribution, hasRecord: Object.values(stats).some(v => v > 0) };
-              })}
-              sort={dashStatSort}
-              setSort={setDashStatSort}
-            />
-          </section>
+          {(() => {
+            const buildRecords = (tm: typeof teamA) => (tm?.players ?? []).map(p => {
+              const stats = aggregatePlayerStatsInGame(game, p.id);
+              const rates = deriveRates(stats);
+              const contribution = stats.serveAce + stats.spikeSuccess + stats.block;
+              return { player: p, teamName: tm?.name ?? '', stats, rates, contribution, hasRecord: Object.values(stats).some(v => v > 0) };
+            });
+            return (
+              <section className="space-y-3">
+                <h2 className="text-base lg:text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2"><BarChart3 size={16} /> 개인 기록 {(game.maxSets ?? 1) > 1 ? '(전체 세트)' : '(1세트)'}</h2>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="space-y-2 min-w-0">
+                    <div className="flex items-center gap-2 px-1"><span className="w-2.5 h-2.5 rounded-full bg-orange-500" /><span className="text-sm font-black text-orange-400 truncate">{teamA?.name}</span></div>
+                    <IndividualStatsTable records={buildRecords(teamA)} sort={dashStatSort} setSort={setDashStatSort} />
+                  </div>
+                  <div className="space-y-2 min-w-0">
+                    <div className="flex items-center gap-2 px-1"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /><span className="text-sm font-black text-blue-400 truncate">{teamB?.name}</span></div>
+                    <IndividualStatsTable records={buildRecords(teamB)} sort={dashStatSort} setSort={setDashStatSort} />
+                  </div>
+                </div>
+              </section>
+            );
+          })()}
         </main>
       </div>
     );

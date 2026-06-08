@@ -11,6 +11,8 @@ export interface Player {
   teamId: TeamId;
   /** 세터 포지션이면 true (세터 카드만 따로 표시) */
   isSetter?: boolean;
+  /** 코트 편성에서 지정하는 포지션 라벨(예: 레프트/라이트/세터/리베로/센터백 등). position==='세터'면 isSetter와 동기화. */
+  position?: string;
 }
 
 export interface Team {
