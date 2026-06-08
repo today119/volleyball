@@ -36,9 +36,12 @@ export interface SyncStatus {
  * 사라져(흰 화면/데이터 소실처럼 보임) → 객체도 Object.values로 배열 복원한다.
  */
 function toArr(x: any): any[] {
-  if (Array.isArray(x)) return x;
-  if (x && typeof x === 'object') return Object.values(x);
-  return [];
+  // null/빈(hole) 항목 제거 — RTDB 배열↔객체 라운드트립이나 legacy 데이터로
+  // courtA 등에 선두 null/구멍이 끼면 length가 1 늘고(예: 8명→9) 첫 항목의
+  // indexOf가 1이 돼 코트편성 순번이 "2"부터 시작하던 off-by-one 차단.
+  // (형제 함수 readScoreEvents의 .filter(Boolean)와 동일한 규약.)
+  const a = Array.isArray(x) ? x : (x && typeof x === 'object' ? Object.values(x) : []);
+  return a.filter(Boolean);
 }
 
 /**

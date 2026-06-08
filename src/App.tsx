@@ -1084,9 +1084,12 @@ const StatPill = ({ label, value, pct }: { label: string; value: string; pct: nu
 
 // RTDB/레거시 데이터가 배열을 키객체로 저장해도 배열로 복원(경기 소실 방지).
 function toArr(x: any): any[] {
-  if (Array.isArray(x)) return x;
-  if (x && typeof x === 'object') return Object.values(x);
-  return [];
+  // null/빈(hole) 항목 제거 — RTDB 배열↔객체 라운드트립이나 legacy 데이터로
+  // courtA 등에 선두 null/구멍이 끼면 length가 1 늘고(예: 8명→9) 첫 항목의
+  // indexOf가 1이 돼 코트편성 순번이 "2"부터 시작하던 off-by-one 차단.
+  // (형제 함수 readScoreEvents의 .filter(Boolean)와 동일한 규약.)
+  const a = Array.isArray(x) ? x : (x && typeof x === 'object' ? Object.values(x) : []);
+  return a.filter(Boolean);
 }
 
 // --- Main App Component ---
