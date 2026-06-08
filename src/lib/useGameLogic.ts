@@ -86,6 +86,10 @@ export function useGameLogic({
   const getStats = (set: GameSet, playerId: PlayerId): PlayerStats =>
     set.playerStats?.[playerId] ?? { ...EMPTY_STATS };
 
+  /** 이 세트에 서브(성공/에이스/실패) 기록이 하나라도 있는지 — 첫 서브 판정용. */
+  const hasAnyServe = (set: GameSet): boolean =>
+    Object.values(set.playerStats ?? {}).some((st: any) => ((st?.serveOk || 0) + (st?.serveAce || 0) + (st?.serveFail || 0)) > 0);
+
   const teamOf = useCallback((playerId: PlayerId): 'A' | 'B' | null => {
     if (!currentGame) return null;
     const teamA = data.teams.find(t => t.id === currentGame.teamAId);
@@ -108,13 +112,23 @@ export function useGameLogic({
 
     // ── collab: 경로단위 update + increment + push ──────────────────────
     if (useCloud && currentGame) {
-      const set = currentGame.sets[currentSetIdx];
+      let set = currentGame.sets[currentSetIdx];
       if (!set) return;
-      const ops = computeScoringOps(set, {
+      // 세트 첫 서브 = 첫 서버 지정: 이 세트에 서브 기록이 아직 없고 이번이 '서브'면
+      // 이 선수/팀을 servingTeam·serverIdx로 잡는다(별도 UI 없이 기록 흐름으로).
+      let firstServeOps: Op[] = [];
+      if (category === 'serve' && !hasAnyServe(set)) {
+        const ci = (team === 'A' ? (set.courtA || []) : (set.courtB || [])).indexOf(playerId);
+        const idxVal = ci >= 0 ? ci : (team === 'A' ? (set.serverIdxA || 0) : (set.serverIdxB || 0));
+        const idxKey = team === 'A' ? 'serverIdxA' : 'serverIdxB';
+        firstServeOps = [{ kind: 'set', path: 'servingTeam', value: team }, { kind: 'set', path: idxKey, value: idxVal }];
+        set = { ...set, servingTeam: team, serverIdxA: team === 'A' ? idxVal : set.serverIdxA, serverIdxB: team === 'B' ? idxVal : set.serverIdxB };
+      }
+      const ops = [...firstServeOps, ...computeScoringOps(set, {
         playerId, team, outcomeKey,
         scoringTeam: outcome.scoringTeam,
         assistingSetterId,
-      });
+      })];
       const lastKey = applyOpsToRtdb(currentGame.id, currentSetIdx, ops);
       const scoreInc = ops.find(o => o.kind === 'inc' && (o.path === 'scoreA' || o.path === 'scoreB')) as Op | undefined;
       const scoreField = scoreInc && scoreInc.kind === 'inc' ? (scoreInc.path as 'scoreA' | 'scoreB') : null;
@@ -133,6 +147,13 @@ export function useGameLogic({
       }
       let scoreA = set.scoreA, scoreB = set.scoreB;
       let servingTeam = set.servingTeam, serverIdxA = set.serverIdxA, serverIdxB = set.serverIdxB;
+      // 세트 첫 서브 = 첫 서버 지정 (별도 UI 없이 기록 흐름으로).
+      if (category === 'serve' && !hasAnyServe(set)) {
+        servingTeam = team;
+        const ci = (team === 'A' ? set.courtA : set.courtB).indexOf(playerId);
+        if (team === 'A') serverIdxA = ci >= 0 ? ci : serverIdxA;
+        else serverIdxB = ci >= 0 ? ci : serverIdxB;
+      }
       let scoringTeam: 'A' | 'B' | null = null;
       if (outcome.scoringTeam === 'self') scoringTeam = team;
       else if (outcome.scoringTeam === 'other') scoringTeam = team === 'A' ? 'B' : 'A';
