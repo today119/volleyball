@@ -2091,16 +2091,49 @@ export default function App() {
   const CourtSetupView = () => {
     const setId = params.setId;
     const game = currentGame;
-    if (!game) return null;
+    const teamA = game ? data.teams.find(t => t.id === game.teamAId) : undefined;
+    const teamB = game ? data.teams.find(t => t.id === game.teamBId) : undefined;
+    const set = game?.sets[setId];
 
-    const teamA = data.teams.find(t => t.id === game.teamAId);
-    const teamB = data.teams.find(t => t.id === game.teamBId);
-    const set = game.sets[setId];
+    // 현재 로스터에 존재하는 선수 id 집합 — courtA/courtB에서 "유효한 선택"만 인정.
+    const rosterIds = (t?: typeof teamA) => new Set((t?.players ?? []).map(p => p.id));
+    const validA = rosterIds(teamA);
+    const validB = rosterIds(teamB);
+
+    // ★ self-heal: courtA/courtB에 남은 "로스터에 없는" 선수 id(삭제·CSV 교체·세트 이월로
+    //   생긴 stale id)를 제거해 저장한다. 이 stale id가 앞쪽에 쌓이면 length가 부풀고
+    //   (8명인데 9명) indexOf가 밀려 순번이 2·3·4번부터 시작하던 버그의 근본 원인.
+    //   filter(Boolean)은 null/구멍만 거르고 유효한 stale id는 못 걸러서 별도 정리 필요.
+    //   훅 규칙상 조기 return 이전에 무조건 호출하고, 내부에서 가드한다.
+    useEffect(() => {
+      if (!game || !set) return;
+      const ca = (set.courtA ?? []).filter(id => validA.has(id));
+      const cb = (set.courtB ?? []).filter(id => validB.has(id));
+      if (ca.length === (set.courtA?.length ?? 0) && cb.length === (set.courtB?.length ?? 0)) return; // 이미 깨끗
+      setData(prev => ({
+        ...prev,
+        games: prev.games.map(g =>
+          g.id === game.id
+            ? { ...g, sets: g.sets.map((s, i) => i === setId ? { ...s, courtA: ca, courtB: cb } : s) }
+            : g
+        ),
+      }));
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [setId, game?.id, set?.courtA, set?.courtB, teamA, teamB]);
+
+    if (!game) return null;
     if (!set) return null; // 세트 인덱스가 비정상(빈 sets 등)이면 흰 화면 대신 안전 종료
+
+    // 표시·카운트·순번은 모두 "정리된" 코트 배열 기준 — 위 effect 반영 전 첫 프레임도 정확.
+    const cleanCourt = {
+      courtA: (set.courtA ?? []).filter(id => validA.has(id)),
+      courtB: (set.courtB ?? []).filter(id => validB.has(id)),
+    };
 
     const togglePlayer = (team: 'A' | 'B', pid: string) => {
       const key = team === 'A' ? 'courtA' : 'courtB';
-      const current = set[key];
+      // stale id를 미리 정리한 상태에서 토글 → 저장도 항상 깨끗하게.
+      const current = cleanCourt[key];
       let next;
       if (current.includes(pid)) {
         next = current.filter(id => id !== pid);
@@ -2108,7 +2141,7 @@ export default function App() {
         if (current.length >= game.courtN) return;
         next = [...current, pid];
       }
-      
+
       const updatedSet = { ...set, [key]: next };
       setData(prev => ({
         ...prev,
@@ -2121,7 +2154,7 @@ export default function App() {
     };
 
     const startMatch = () => {
-      if (set.courtA.length < game.courtN || set.courtB.length < game.courtN) {
+      if (cleanCourt.courtA.length < game.courtN || cleanCourt.courtB.length < game.courtN) {
         alert(`각 팀당 ${game.courtN}명의 선수를 선택해야 합니다.`);
         return;
       }
@@ -2149,11 +2182,11 @@ export default function App() {
               <div key={t.team} className="flex flex-col space-y-3">
                 <div className="flex justify-between items-center px-1">
                   <h3 className={cn("text-xs font-black uppercase tracking-widest", t.color)}>{t.data?.name}</h3>
-                  <span className="text-[10px] font-bold text-slate-500">{set[t.key].length}/{game.courtN}</span>
+                  <span className="text-[10px] font-bold text-slate-500">{cleanCourt[t.key].length}/{game.courtN}</span>
                 </div>
                 <div className="flex-1 overflow-y-auto space-y-2 pr-1">
                   {(t.data?.players ?? []).map(player => {
-                    const idx = set[t.key].indexOf(player.id);
+                    const idx = cleanCourt[t.key].indexOf(player.id);
                     const isSelected = idx !== -1;
                     return (
                       <button 
@@ -2185,7 +2218,7 @@ export default function App() {
 
         <footer className="shrink-0 sticky bottom-0 z-10 p-4 lg:p-6 bg-slate-950 border-t border-slate-900" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
           <Button variant="primary" size="lg" className="w-full" onClick={startMatch} icon={Play}>
-            경기 시작 ({set.courtA.length}/{game.courtN} · {set.courtB.length}/{game.courtN})
+            경기 시작 ({cleanCourt.courtA.length}/{game.courtN} · {cleanCourt.courtB.length}/{game.courtN})
           </Button>
         </footer>
       </div>
