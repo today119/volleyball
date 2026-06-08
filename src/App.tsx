@@ -442,21 +442,30 @@ const ScoreboardCard = ({
         </div>
       </div>
 
-      {/* SET 카드 (가운데) — 모바일은 좁게, 데스크톱은 타워 컬럼 폭 */}
-      <div className="relative flex flex-col items-center justify-center self-stretch bg-slate-50 rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm w-14 lg:w-[240px] px-1 lg:px-0 shrink-0">
-        {/* 이전 세트 화살표 (좌) — 데스크톱, 이전 세트가 있을 때만 */}
-        {setNav?.canPrev && setNav.onPrev && (
-          <button onClick={setNav.onPrev} title="이전 세트" className="hidden lg:flex absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center rounded-lg bg-white border border-slate-300 text-slate-500 hover:bg-slate-100 transition-colors">
-            <ChevronLeft size={20} />
+      {/* SET 카드 (가운데) — 모바일은 좁게, 데스크톱은 타워 컬럼 폭.
+          데스크톱: [‹이전번호] [SET N / TO] [다음번호›] 가로 배치 → SET 글자와 화살표가
+          겹치지 않게 flex로 분리(이전엔 absolute라 SET 텍스트를 침범했음). */}
+      <div className="relative flex items-center justify-center lg:justify-between gap-1 self-stretch bg-slate-50 rounded-xl lg:rounded-2xl border border-slate-200 shadow-sm w-14 lg:w-[240px] px-1 lg:px-2.5 shrink-0">
+        {/* 이전 세트 (좌) — 데스크톱. 자리 유지를 위해 없을 땐 빈 칸. */}
+        {setNav?.canPrev && setNav.onPrev ? (
+          <button onClick={setNav.onPrev} title="이전 세트" className="hidden lg:flex h-9 items-center gap-0.5 pl-1.5 pr-2 rounded-lg bg-white border border-slate-300 text-slate-600 hover:bg-slate-100 font-black text-sm shrink-0 transition-colors">
+            <ChevronLeft size={18} />{currentSet.number - 1}
           </button>
+        ) : (
+          <div className="hidden lg:block w-12 shrink-0" />
         )}
-        <div className="text-sm lg:text-4xl font-black text-slate-800 tracking-tight lg:tracking-wide leading-none whitespace-nowrap">SET {currentSet.number}</div>
-        <div className="text-[8px] lg:text-xs font-bold text-slate-400 tracking-wider lg:tracking-[0.25em] mt-0.5 lg:mt-2 whitespace-nowrap">TO {setTarget}</div>
-        {/* 세트 종료 → 다음 세트(또는 결과) 화살표 (우) — 데스크톱 */}
-        {setNav?.onNext && (
-          <button onClick={setNav.onNext} title={setNav.nextTitle} className="hidden lg:flex absolute right-2 top-1/2 -translate-y-1/2 h-9 items-center gap-0.5 pl-2.5 pr-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md transition-colors whitespace-nowrap">
+        {/* 가운데: SET 번호(축소) + TO 목표점 */}
+        <div className="flex flex-col items-center justify-center min-w-0 leading-none">
+          <div className="text-sm lg:text-2xl font-black text-slate-800 tracking-tight leading-none whitespace-nowrap">SET {currentSet.number}</div>
+          <div className="text-[8px] lg:text-[10px] font-bold text-slate-400 tracking-wider lg:tracking-[0.2em] mt-0.5 lg:mt-1 whitespace-nowrap">TO {setTarget}</div>
+        </div>
+        {/* 다음 세트(또는 결과) (우) — 데스크톱. 세트 종료 동작이라 강조색 유지, 라벨은 숫자만. */}
+        {setNav?.onNext ? (
+          <button onClick={setNav.onNext} title={setNav.nextTitle} className="hidden lg:flex h-9 items-center gap-0.5 pl-2 pr-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm shadow-md shrink-0 transition-colors whitespace-nowrap">
             {setNav.nextShort}<ChevronRight size={18} />
           </button>
+        ) : (
+          <div className="hidden lg:block w-12 shrink-0" />
         )}
       </div>
 
@@ -2235,7 +2244,7 @@ export default function App() {
     const teamA = data.teams.find(t => t.id === game.teamAId);
     const teamB = data.teams.find(t => t.id === game.teamBId);
 
-    const { recordAction, undoLastScore, adjustStat, rotateServer, substitute } = useGameLogic({
+    const { recordAction, undoLastScore, adjustStat, rotateServer, substitute, setFirstServer } = useGameLogic({
       data,
       setData,
       currentGame: game,
@@ -2286,8 +2295,24 @@ export default function App() {
       team: 'A' | 'B';
     } | null>(null);
 
+    // 첫 서버 지정 모드 — 켜져 있으면 코트 선수 탭이 "기록"이 아니라 "첫 서버 지정"으로 동작.
+    const [pickingServer, setPickingServer] = useState(false);
+    // 세트 시작 여부(점수·득점 이벤트 있으면 진행 중) — 첫 서브 안내 노출 판단용.
+    const setStarted = set.scoreA > 0 || set.scoreB > 0 || readScoreEvents(set.scoreEvents).length > 0;
+
     const handlePlayerTap = (team: 'A' | 'B', playerId: string) => {
       if (readOnly) return;
+      // 첫 서버 지정 모드: 탭한 코트 선수를 첫 서버로 설정(서빙팀+서버위치) 후 모드 종료.
+      if (pickingServer) {
+        const courtIds = team === 'A' ? set.courtA : set.courtB;
+        const idx = courtIds.indexOf(playerId);
+        if (idx === -1) return; // 코트에 없는 선수는 서버가 될 수 없음
+        setFirstServer(team, idx);
+        setPickingServer(false);
+        const p = (team === 'A' ? teamA : teamB)?.players.find(pp => pp.id === playerId);
+        showToast(`첫 서브: ${p?.number ?? ''} ${p?.name ?? ''}`.trim());
+        return;
+      }
       // If only one category allowed, skip the picker
       if (allowedCategories.length === 1) {
         setPendingAction({ playerId, team, category: allowedCategories[0] });
@@ -2432,11 +2457,44 @@ export default function App() {
               canPrev: setId > 0,
               onPrev: () => navigate('game-record', { setId: setId - 1 }),
               onNext: endCurrentSet,
-              nextShort: matchDecided ? '결과' : `${setId + 2}세트`,
+              nextShort: matchDecided ? '결과' : `${setId + 2}`,
               nextTitle: matchDecided ? '세트 종료 · 결과 보기' : `세트 종료 · ${setId + 2}세트로`,
             } : undefined}
           />
         </div>
+
+        {/* 첫 서브 지정 바 — 세트 시작 전(또는 지정 모드 중)에만. 첫 서브 팀/선수를 사용자가 직접 고른다. */}
+        {!readOnly && role === 'teacher' && (!setStarted || pickingServer) && (() => {
+          const sCourt = set.servingTeam === 'A' ? (set.courtA ?? []) : (set.courtB ?? []);
+          const sTeamObj = set.servingTeam === 'A' ? teamA : teamB;
+          const sIdx = sCourt.length ? ((((set.servingTeam === 'A' ? set.serverIdxA : set.serverIdxB) || 0) % sCourt.length) + sCourt.length) % sCourt.length : 0;
+          const serverP = sTeamObj?.players.find(p => p.id === sCourt[sIdx]);
+          return (
+            <div className="shrink-0 px-4 pt-2">
+              <div className={cn(
+                'flex items-center justify-between gap-2 rounded-xl border px-3 py-2',
+                pickingServer ? 'bg-amber-500/15 border-amber-500/40' : 'bg-slate-900 border-slate-800'
+              )}>
+                <div className="flex items-center gap-2 min-w-0 text-xs lg:text-sm">
+                  <span className="shrink-0">🏐</span>
+                  {pickingServer ? (
+                    <span className="font-bold text-amber-300 truncate">첫 서브할 선수를 코트에서 탭하세요</span>
+                  ) : (
+                    <span className="text-slate-300 truncate">
+                      첫 서브 <span className="font-black text-white">{sTeamObj?.name ?? (set.servingTeam === 'A' ? '홈' : '어웨이')}</span>
+                      {serverP && <span className="font-bold text-slate-300"> · {serverP.number} {serverP.name}</span>}
+                    </span>
+                  )}
+                </div>
+                {pickingServer ? (
+                  <button onClick={() => setPickingServer(false)} className="shrink-0 px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs transition-colors">취소</button>
+                ) : (
+                  <button onClick={() => setPickingServer(true)} className="shrink-0 px-2.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs transition-colors whitespace-nowrap">첫 서브 지정</button>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* 본문: 데스크톱 3열 / 모바일 1열. 명단은 컬럼 내부 스크롤 → 스코어보드·하단바 항상 보임 */}
         <main className="flex-1 overflow-hidden p-4 pt-3">

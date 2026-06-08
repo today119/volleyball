@@ -207,6 +207,26 @@ export function useGameLogic({
     updateCurrentSet((set) => ({ ...set, servingTeam: team }));
   }, [updateCurrentSet, useCloud, currentGame, currentSetIdx]);
 
+  /**
+   * 첫 서버 지정 — 서브할 팀(servingTeam)과 그 팀의 서버 위치(serverIdx)를 한 번에 설정.
+   * idx는 courtA/courtB(서브 오더) 안에서의 위치. 이후 사이드아웃 로테이션은 이 지점부터 진행.
+   * (첫 서브 팀이 HOME으로 고정돼 매번 꼬이던 문제 해결.)
+   */
+  const setFirstServer = useCallback((team: 'A' | 'B', idx: number) => {
+    if (useCloud && currentGame) {
+      database.ref(`${setPath(currentGame.id, currentSetIdx)}`).update({
+        servingTeam: team,
+        [`serverIdx${team}`]: idx,
+      });
+      return;
+    }
+    updateCurrentSet((set) => ({
+      ...set,
+      servingTeam: team,
+      ...(team === 'A' ? { serverIdxA: idx } : { serverIdxB: idx }),
+    }));
+  }, [updateCurrentSet, useCloud, currentGame, currentSetIdx]);
+
   const substitute = useCallback((team: 'A' | 'B', outPlayerId: PlayerId, inPlayerId: PlayerId) => {
     if (useCloud && currentGame) {
       const set = currentGame.sets[currentSetIdx];
@@ -259,5 +279,5 @@ export function useGameLogic({
     });
   }, [updateCurrentSet, useCloud, currentGame, currentSetIdx]);
 
-  return { recordAction, undoLastScore, adjustStat, setServingTeam, rotateServer, substitute, teamOf };
+  return { recordAction, undoLastScore, adjustStat, setServingTeam, setFirstServer, rotateServer, substitute, teamOf };
 }
