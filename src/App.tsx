@@ -44,6 +44,7 @@ import {
   ActionCategory,
   EvaluatorRole,
   ACTION_OUTCOMES,
+  EMPTY_STATS,
 } from './types';
 import { useFirebaseSync } from './lib/useFirebaseSync';
 import { useGameLogic } from './lib/useGameLogic';
@@ -1341,6 +1342,7 @@ export default function App() {
   const [dashStatSort, setDashStatSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'contribution', dir: 'desc' });
   // 자체리그 누적 리포트 정렬 상태(별도).
   const [intraStatSort, setIntraStatSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'contribution', dir: 'desc' });
+  const [intraPosSort, setIntraPosSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'contribution', dir: 'desc' });
   // 경기 설정 폼 상태도 App 레벨로 — 중첩 뷰가 collab 리렌더로 리마운트되면
   // 로컬 useState가 초기화돼 "9인제/3전2선승 선택이 6인제/단판으로 되돌아가던" 버그 방지.
   const [gsTeamA, setGsTeamA] = useState('');
@@ -2353,6 +2355,16 @@ export default function App() {
           ...tm,
           players: (tm.players ?? []).map(pl => pl.id === pid ? { ...pl, position: pos || undefined, isSetter: pos === '세터' } : pl),
         })),
+        // 이 게임/세트에 포지션 스냅샷 저장(포지션별 수행도 집계용).
+        games: prev.games.map(g => {
+          if (g.id !== game.id) return g;
+          return { ...g, sets: g.sets.map((sx, i) => {
+            if (i !== setId) return sx;
+            const positions = { ...(sx.positions ?? {}) };
+            if (pos) positions[pid] = pos; else delete positions[pid];
+            return { ...sx, positions };
+          }) };
+        }),
       }));
     };
 
@@ -3052,6 +3064,40 @@ export default function App() {
       return { player: p, teamName: team?.name ?? '', stats, rates, contribution, hasRecord: Object.values(stats).some(v => v > 0) };
     });
 
+    // ── 포지션별 수행도: 세트별 포지션 스냅샷으로 (포지션 × 선수) 누적 ──
+    const POS_ORDER = ['세터', '레프트', '라이트', '센터', '앞차', '백차', '센터백', '레프트백', '라이트백', '리베로'];
+    const posBuckets: Record<string, Record<string, PlayerStats>> = {};
+    for (const g of intraGames) {
+      for (const st of (g.sets ?? [])) {
+        const positions = st.positions ?? {};
+        const ps = st.playerStats ?? {};
+        for (const pid of Object.keys(positions)) {
+          const pos = positions[pid];
+          const stat = ps[pid];
+          if (!pos || !stat) continue;
+          posBuckets[pos] = posBuckets[pos] || {};
+          const acc = posBuckets[pos][pid] || { ...EMPTY_STATS };
+          (Object.keys(EMPTY_STATS) as Array<keyof PlayerStats>).forEach(k => { acc[k] = (acc[k] || 0) + (stat[k] || 0); });
+          posBuckets[pos][pid] = acc;
+        }
+      }
+    }
+    const posSections = Object.keys(posBuckets)
+      .sort((a, b) => {
+        const ia = POS_ORDER.indexOf(a), ib = POS_ORDER.indexOf(b);
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      })
+      .map(pos => {
+        const recs = Object.entries(posBuckets[pos]).map(([pid, stats]) => {
+          const player = roster.find(p => p.id === pid) || { id: pid, name: '?', number: '', teamId } as Player;
+          const rates = deriveRates(stats);
+          const contribution = stats.serveAce + stats.spikeSuccess + stats.block;
+          return { player, teamName: '', stats, rates, contribution, hasRecord: Object.values(stats).some(v => v > 0) };
+        });
+        return { pos, recs };
+      })
+      .filter(sec => sec.recs.some(r => r.hasRecord));
+
     return (
       <div className="flex flex-col h-full bg-slate-950 text-slate-50">
         <header className="p-6 flex items-center gap-4 border-b border-slate-900">
@@ -3117,6 +3163,22 @@ export default function App() {
                 <h2 className="text-base lg:text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2"><BarChart3 size={16} /> 누적 개인기록 (자체리그 {intraGames.length}경기)</h2>
                 <IndividualStatsTable records={records} sort={intraStatSort} setSort={setIntraStatSort} />
               </section>
+
+              {posSections.length > 0 && (
+                <section className="space-y-3">
+                  <h2 className="text-base lg:text-xs font-bold text-purple-400 uppercase tracking-widest flex items-center gap-2"><BarChart3 size={16} /> 포지션별 수행도</h2>
+                  <p className="text-[11px] text-slate-500 -mt-1">각 선수가 그 포지션으로 뛴 세트들의 누적 기록 — 누가 어느 포지션에서 잘하는지.</p>
+                  {posSections.map(sec => (
+                    <div key={sec.pos} className="space-y-1.5">
+                      <div className="flex items-center gap-2 px-1">
+                        <span className="px-2 py-0.5 rounded-lg bg-purple-600 text-white text-xs font-black">{sec.pos}</span>
+                        <span className="text-[11px] text-slate-500">{sec.recs.filter(r => r.hasRecord).length}명</span>
+                      </div>
+                      <IndividualStatsTable records={sec.recs} sort={intraPosSort} setSort={setIntraPosSort} />
+                    </div>
+                  ))}
+                </section>
+              )}
 
               {recentGames.length > 0 && (
                 <section className="space-y-2">

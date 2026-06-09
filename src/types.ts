@@ -108,6 +108,8 @@ export interface GameSet {
   servingTeam: 'A' | 'B';
   /** Per-player stat counters, keyed by playerId. */
   playerStats: Record<PlayerId, PlayerStats>;
+  /** 이 세트에서 각 선수가 뛴 포지션 스냅샷(코트 편성 시 기록). 포지션별 수행도 집계용. */
+  positions?: Record<PlayerId, string>;
   /** 
    * Scoring timeline for the cumulative graph.
    * Each entry = a scoring event in chronological order.
