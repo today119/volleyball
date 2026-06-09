@@ -2378,9 +2378,24 @@ export default function App() {
 
     return (
       <div className="flex flex-col h-full bg-slate-950 text-slate-50">
-        <header className="p-6 flex items-center gap-4 border-b border-slate-900">
-          <Button variant="ghost" size="sm" onClick={() => navigate('game-setup')} icon={ChevronLeft} />
-          <h1 className="text-xl font-black tracking-tight">코트 <span className="text-orange-600">편성</span></h1>
+        <header className="p-6 flex items-center gap-3 border-b border-slate-900">
+          <Button variant="ghost" size="sm" onClick={() => navigate(game.intrasquad ? 'intrasquad-setup' : 'game-setup')} icon={ChevronLeft} />
+          <h1 className="text-xl font-black tracking-tight">{game.intrasquad ? '자체리그 ' : ''}코트 <span className="text-orange-600">편성</span></h1>
+          <div className="ml-auto flex items-center gap-1 shrink-0">
+            <span className="text-[10px] font-bold text-slate-500 mr-0.5">인원수</span>
+            {[6, 9].map(n => (
+              <button
+                key={n}
+                onClick={() => applyGameSettings({ courtN: n })}
+                className={cn(
+                  "px-2.5 py-1 rounded-lg text-xs font-black border transition-colors",
+                  game.courtN === n ? "bg-orange-600 border-orange-600 text-white" : "bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700"
+                )}
+              >
+                {n}인제
+              </button>
+            ))}
+          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 space-y-6 min-h-0">
