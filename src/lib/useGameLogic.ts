@@ -105,7 +105,13 @@ export function useGameLogic({
     outcomeKey: keyof PlayerStats,
     assistingSetterId?: PlayerId,
   ) => {
-    const team = teamOf(playerId);
+    // 사이드(A/B) 판정 — roster 소속이 아니라 "지금 어느 코트에 있는지"로 결정.
+    // 일반 경기에선 결과가 동일(코트A 선수=팀A)하고, 자체리그(같은 roster 양분)에서도 정확.
+    const sideSet = currentGame?.sets?.[currentSetIdx];
+    const team: 'A' | 'B' | null =
+      sideSet && (sideSet.courtA || []).includes(playerId) ? 'A' :
+      sideSet && (sideSet.courtB || []).includes(playerId) ? 'B' :
+      teamOf(playerId);
     if (!team) return;
     const outcome = ACTION_OUTCOMES[category].find(o => o.key === outcomeKey);
     if (!outcome) return;
