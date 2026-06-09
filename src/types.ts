@@ -139,6 +139,10 @@ export interface Game {
   endedAt?: string;  // ISO timestamp when teacher pressed "저장 후 종료"
   leagueId?: string;
   matchId?: string;
+  /** 자체리그(인트라스쿼드): 한 팀 roster를 양 사이드로 나눠 연습. teamAId===teamBId. */
+  intrasquad?: boolean;
+  /** 인트라스쿼드 출석 선수 풀(이 풀에서만 코트 편성). */
+  attendees?: PlayerId[];
 }
 
 export interface PeerEval {
