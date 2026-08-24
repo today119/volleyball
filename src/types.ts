@@ -145,6 +145,13 @@ export interface Game {
   intrasquad?: boolean;
   /** 인트라스쿼드 출석 선수 풀(이 풀에서만 코트 편성). */
   attendees?: PlayerId[];
+  /**
+   * 이 경기에 한해 A/B 팀에 속한 선수 목록.
+   * 출결 때문에 선수를 섞어 뛴 날을 위한 것으로, 지정하면 기본 소속팀(player.teamId)보다 우선한다.
+   * 비어 있으면 기본 소속팀으로 판정한다.
+   */
+  rosterA?: PlayerId[];
+  rosterB?: PlayerId[];
 }
 
 export interface PeerEval {
@@ -154,15 +161,27 @@ export interface PeerEval {
   timestamp: number;
 }
 
+/**
+ * 2026학년도 2학기 「스포츠 경기 분석」 평가계획 기준.
+ *   경기 수행 30 + 개인 기록(서브) 40 + 경기 분석 및 피드백 30 = 100
+ */
 export interface EvaluationCriteria {
-  /** Serve metric: (ace*2 + ok*1) / total_serves */
+  /** 개인 기록 40점 — 서브 평균 = (득점×3 + 성공×2) / 서브 횟수 */
   serve: { min: number; score: number }[];
-  /** League metric: total_win_points / games_played (win=3, lose=0) */
+  /** 경기 수행 30점 — 승점 평균 = 이긴 세트 수 합계 / 본인이 뛴 경기 수 */
   league: { min: number; score: number }[];
-  /** Performance: peer-eval averaged level → score */
-  performance: { level: number; score: number }[];
-  /** Game record (participation) fixed bonus */
-  gameRecord: number;
+  /** 경기 분석 및 피드백 30점 — 기록지 5항목 중 충족 개수 → 점수 */
+  gameRecord: { min: number; score: number }[];
+  /** (구버전 호환) 동료평가 — 2026-2학기 계획서에서 삭제됨 */
+  performance?: { level: number; score: number }[];
+}
+
+/** 경기 기록지 5항목 충족 여부 — 학생별로 교사가 체크 */
+export interface RecordSheet {
+  /** 1. 기록 분석(강점·약점) 2. 포지션·역할 3. 다음 목표 전략 4. 인상 깊은 장면 5. 깨달은 점 */
+  items: [boolean, boolean, boolean, boolean, boolean];
+  /** 미제출이면 true — 충족 개수와 무관하게 0점 */
+  notSubmitted?: boolean;
 }
 
 /**
@@ -199,6 +218,8 @@ export interface AppData {
   gasUrl: string;
   /** Peer evaluations keyed by playerId → list of entries. */
   peerEvals: Record<PlayerId, PeerEval[]>;
+  /** 경기 분석 및 피드백(기록지) 체크 — playerId → 5항목 */
+  recordSheets?: Record<PlayerId, RecordSheet>;
 }
 
 /** Active connected device (for showing "X명 접속중" badge). */

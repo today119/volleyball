@@ -54,6 +54,7 @@ import {
   deriveRates,
   aggregatePlayerStatsInGame,
   aggregatePlayerStatsAllGames,
+  lookupCriteriaScore,
 } from './lib/stats';
 import {
   gasCreateRosterTemplate,
@@ -83,26 +84,42 @@ import {
 // --- Constants & Defaults ---
 const STORAGE_KEY = 'spike_log_v1';
 
+/** 평가계획서 「경기 분석 및 피드백」 기록지 5항목 */
+const RECORD_ITEM_LABELS = [
+  '기록 분석(강점·약점)',
+  '포지션과 역할 수행',
+  '다음 경기 전략',
+  '인상 깊은 장면',
+  '깨달은 점',
+];
+
+// 2026학년도 2학기 「스포츠 경기 분석」 평가계획 기준
+//   경기 수행 30 (승점 평균) + 개인 기록 40 (서브 평균) + 경기 분석 및 피드백 30 = 100
 const DEFAULT_CRITERIA: EvaluationCriteria = {
+  // 개인 기록 40점 — 서브 평균 = (득점×3 + 성공×2) / 서브 횟수
   serve: [
-    { min: 2.0, score: 20 },
-    { min: 1.5, score: 17 },
-    { min: 1.0, score: 14 },
-    { min: 0, score: 11 },
+    { min: 1.8, score: 40 },
+    { min: 1.4, score: 35 },
+    { min: 1.0, score: 30 },
+    { min: 0.7, score: 25 },
+    { min: 0,   score: 20 },
   ],
+  // 경기 수행 30점 — 승점 평균 = 이긴 세트 수 / 본인이 뛴 경기 수
   league: [
-    { min: 1.75, score: 20 },
-    { min: 1.25, score: 17 },
-    { min: 0.75, score: 14 },
-    { min: 0, score: 11 },
+    { min: 1.8, score: 30 },
+    { min: 1.4, score: 25 },
+    { min: 1.0, score: 20 },
+    { min: 0.7, score: 15 },
+    { min: 0,   score: 10 },
   ],
-  performance: [
-    { level: 4, score: 40 },
-    { level: 3, score: 34 },
-    { level: 2, score: 28 },
-    { level: 1, score: 22 },
+  // 경기 분석 및 피드백 30점 — 기록지 5항목 중 충족 개수
+  gameRecord: [
+    { min: 4, score: 30 },
+    { min: 3, score: 25 },
+    { min: 2, score: 20 },
+    { min: 1, score: 15 },
+    { min: 0, score: 10 },
   ],
-  gameRecord: 20,
 };
 
 const INITIAL_DATA: AppData = {
@@ -1077,6 +1094,70 @@ const AssistPicker = ({
 );
 
 // ── Modal overlay wrapper ─────────────────────────────────────────────
+/**
+ * 서브 순서 맞추기 — A·B 팀을 각각 따로 조정한다.
+ * 득점 입력 중 순서가 틀어지는 일이 있는데, 예전 UI는 「서브 중인 팀」만 돌릴 수 있어서
+ * 상대 팀 순서가 어긋나면 고칠 방법이 없었다. 다음 서버 이름을 같이 보여줘 어긋난 걸 바로 알아채게 한다.
+ */
+const ServeOrderPanel = ({
+  set, teamA, teamB, onRotate, compact,
+}: {
+  set: GameSet;
+  teamA?: Team;
+  teamB?: Team;
+  onRotate: (team: 'A' | 'B', dir: 1 | -1) => void;
+  compact?: boolean;
+}) => (
+  <div className="rounded-xl border-2 border-slate-300 bg-white overflow-hidden">
+    <div className="text-[10px] text-slate-500 text-center font-bold uppercase tracking-widest py-1.5 bg-slate-50 border-b border-slate-200">
+      서브 순서 맞추기
+    </div>
+    {(['A', 'B'] as const).map((sideKey) => {
+      const court = sideKey === 'A' ? (set.courtA ?? []) : (set.courtB ?? []);
+      const idx = sideKey === 'A' ? (set.serverIdxA ?? 0) : (set.serverIdxB ?? 0);
+      const team = sideKey === 'A' ? teamA : teamB;
+      const sid = court.length ? court[idx % court.length] : undefined;
+      const sp = team?.players.find((p) => p.id === sid);
+      const serving = set.servingTeam === sideKey;
+      return (
+        <div
+          key={sideKey}
+          className={cn(
+            'flex items-center gap-2 px-2',
+            compact ? 'py-1.5' : 'py-2',
+            sideKey === 'A' && 'border-b border-slate-200',
+            serving && 'bg-amber-50',
+          )}
+        >
+          <button
+            onClick={() => onRotate(sideKey, -1)}
+            className="w-11 h-11 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 active:scale-95 transition shrink-0"
+            aria-label="서브 순서 이전"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <div className="flex-1 min-w-0 text-center leading-tight">
+            <div className="text-[10px] font-bold text-slate-500 truncate">
+              {team?.name ?? sideKey}
+              {serving && ' · 서브 중'}
+            </div>
+            <div className="text-sm font-black text-slate-800 truncate">
+              {sp ? `${sp.number ? sp.number + ' ' : ''}${sp.name}` : '—'}
+            </div>
+          </div>
+          <button
+            onClick={() => onRotate(sideKey, 1)}
+            className="w-11 h-11 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 active:scale-95 transition shrink-0"
+            aria-label="서브 순서 다음"
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
+      );
+    })}
+  </div>
+);
+
 const ModalOverlay = ({ children, onClose }: { children: React.ReactNode; onClose: () => void }) => (
   <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end justify-center p-4" onClick={onClose}>
     <motion.div
@@ -1350,6 +1431,10 @@ export default function App() {
   const [gsTarget, setGsTarget] = useState(25);
   const [gsCourtN, setGsCourtN] = useState(6);
   const [gsMaxSets, setGsMaxSets] = useState(1); // 1=단판, 3=3전2선승, 5=5전3선승
+  // 출결에 따라 이 경기만 팀을 섞을 때 쓰는 임시 명단(비어 있으면 기본 소속팀 그대로).
+  const [gsMix, setGsMix] = useState(false);
+  const [gsRosterA, setGsRosterA] = useState<string[]>([]);
+  const [gsRosterB, setGsRosterB] = useState<string[]>([]);
   // 경기 설정 모달 open 상태도 App 레벨로 — 중첩 게임뷰가 collab 동기화로 리마운트되면
   // 로컬 useState(false)로 초기화되어 모바일에서 모달이 열리자마자 닫히던(깜빡) 버그 방지.
   const [showSettings, setShowSettings] = useState(false);
@@ -1782,6 +1867,23 @@ export default function App() {
 
     if (!team) return null;
 
+    /** 기록지 5항목 체크 */
+    const setRecordItem = (playerId: string, idx: number, on: boolean) => {
+      setData(prev => {
+        const cur = prev.recordSheets?.[playerId];
+        const items = [...(cur?.items ?? [false, false, false, false, false])] as [boolean, boolean, boolean, boolean, boolean];
+        items[idx] = on;
+        return { ...prev, recordSheets: { ...(prev.recordSheets ?? {}), [playerId]: { ...cur, items } } };
+      });
+    };
+    const setRecordNotSubmitted = (playerId: string, notSubmitted: boolean) => {
+      setData(prev => {
+        const cur = prev.recordSheets?.[playerId];
+        const items = (cur?.items ?? [false, false, false, false, false]) as [boolean, boolean, boolean, boolean, boolean];
+        return { ...prev, recordSheets: { ...(prev.recordSheets ?? {}), [playerId]: { items, notSubmitted } } };
+      });
+    };
+
     const addPlayer = () => {
       if (!pName) return;
       const newPlayer: Player = {
@@ -2085,6 +2187,71 @@ export default function App() {
             </div>
           </Card>
 
+          {/* ── 경기 분석 및 피드백 30점 — 평가계획서의 기록지 5항목 ── */}
+          {(team.players?.length ?? 0) > 0 && (
+            <Card title="📝 경기 분석 및 피드백 (30점)">
+              <p className="text-sm lg:text-[11px] text-slate-500 mb-3 leading-relaxed">
+                기록지 5항목 중 충족한 것을 체크하세요.
+                <b className="text-slate-100"> 4개 이상 30점 · 3개 25 · 2개 20 · 1개 15 · 없음 10 · 미제출 0</b>
+              </p>
+              <div className="flex items-center gap-2 mb-2 px-3">
+                <div className="w-24 lg:w-28 shrink-0" />
+                <div className="flex-1 grid grid-cols-5 gap-1 text-[10px] font-bold text-slate-500 text-center">
+                  {RECORD_ITEM_LABELS.map((lb, i) => (
+                    <div key={i} title={lb} className="truncate">{i + 1}. {lb}</div>
+                  ))}
+                </div>
+                <div className="w-16 shrink-0" />
+                <div className="w-11 shrink-0" />
+              </div>
+              <div className="space-y-1.5">
+                {(team.players ?? []).map(player => {
+                  const sheet = data.recordSheets?.[player.id];
+                  const items = sheet?.items ?? [false, false, false, false, false];
+                  const notSub = !!sheet?.notSubmitted;
+                  const n = notSub ? 0 : items.filter(Boolean).length;
+                  const score = notSub ? 0 : lookupCriteriaScore(n, data.criteria.gameRecord);
+                  return (
+                    <div key={player.id} className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2">
+                      <div className="w-24 lg:w-28 shrink-0 min-w-0">
+                        <div className="font-bold text-sm text-slate-100 truncate">{player.name}</div>
+                        <div className="text-[10px] text-slate-500 truncate">{player.org || '-'}</div>
+                      </div>
+                      <div className="flex-1 grid grid-cols-5 gap-1">
+                        {items.map((on, i) => (
+                          <button
+                            key={i}
+                            disabled={notSub}
+                            onClick={() => setRecordItem(player.id, i, !on)}
+                            title={RECORD_ITEM_LABELS[i]}
+                            className={cn(
+                              "h-10 rounded-lg font-black text-sm transition-all",
+                              notSub ? "bg-slate-100 text-slate-600"
+                                : on ? "bg-emerald-600 text-white"
+                                     : "bg-slate-100 text-slate-400 hover:bg-slate-200"
+                            )}
+                          >{i + 1}</button>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => setRecordNotSubmitted(player.id, !notSub)}
+                        className={cn(
+                          "w-16 shrink-0 whitespace-nowrap text-[10px] font-bold px-1 py-1.5 rounded-md border transition-all",
+                          notSub ? "bg-red-100 border-red-300 text-red-700"
+                                 : "bg-transparent border-slate-200 text-slate-400 hover:border-red-200 hover:text-red-500"
+                        )}
+                      >미제출</button>
+                      <div className={cn(
+                        "w-11 shrink-0 text-right font-black text-base",
+                        score >= 25 ? "text-emerald-500" : score > 0 ? "text-slate-100" : "text-red-500"
+                      )}>{score}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
           <div className="space-y-3">
             <h2 className="text-base lg:text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">선수 명단 ({(team.players?.length ?? 0)}명)</h2>
             {(team.players?.length ?? 0) === 0 ? (
@@ -2141,6 +2308,22 @@ export default function App() {
     const courtN = gsCourtN, setCourtN = setGsCourtN;
     const maxSets = gsMaxSets, setMaxSets = setGsMaxSets;
 
+    // ── 이 경기만 팀 섞기 ──
+    const allPlayers = data.teams.flatMap(t => (t.players ?? []).map(p => ({ ...p, teamName: t.name })));
+    /** 섞기를 켜면 기본 소속팀 기준으로 초기 명단을 채워 넣는다. */
+    const toggleMix = () => {
+      if (!gsMix) {
+        setGsRosterA((data.teams.find(t => t.id === tA)?.players ?? []).map(p => p.id));
+        setGsRosterB((data.teams.find(t => t.id === tB)?.players ?? []).map(p => p.id));
+      }
+      setGsMix(!gsMix);
+    };
+    /** 한 선수를 A / B / 제외 로 순환 배정. 반대 사이드에 있으면 자동으로 빠진다. */
+    const assign = (pid: string, side: 'A' | 'B' | null) => {
+      setGsRosterA(prev => side === 'A' ? (prev.includes(pid) ? prev : [...prev, pid]) : prev.filter(id => id !== pid));
+      setGsRosterB(prev => side === 'B' ? (prev.includes(pid) ? prev : [...prev, pid]) : prev.filter(id => id !== pid));
+    };
+
     const start = () => {
       if (tA === tB) {
         alert('서로 다른 팀을 선택해주세요.');
@@ -2161,6 +2344,14 @@ export default function App() {
         sets: [createNewSet(1)],
         winnerTeamId: null,
       };
+      if (gsMix) {
+        if (gsRosterA.length < courtN || gsRosterB.length < courtN) {
+          alert(`팀을 섞을 때는 각 팀에 최소 ${courtN}명을 배정해야 합니다.`);
+          return;
+        }
+        newGame.rosterA = gsRosterA;
+        newGame.rosterB = gsRosterB;
+      }
       setData(prev => ({ ...prev, games: [...prev.games, newGame] }));
       setCurrentGameId(newGame.id);
       navigate('game-court', { setId: 0 });
@@ -2202,6 +2393,60 @@ export default function App() {
                   </select>
                 </div>
               </div>
+            </Card>
+
+            <Card title="이 경기 팀 편성">
+              <button
+                onClick={toggleMix}
+                className={cn(
+                  "w-full py-3 rounded-xl text-base lg:text-sm font-bold transition-all border",
+                  gsMix ? "bg-orange-600 border-orange-600 text-white" : "bg-slate-800 border-slate-700 text-slate-400"
+                )}
+              >
+                {gsMix ? '✓ 출결에 따라 선수 섞기 (이 경기만)' : '출결에 따라 선수 섞기'}
+              </button>
+              {!gsMix ? (
+                <p className="text-xs text-slate-500 mt-2.5 leading-relaxed">
+                  기본 소속팀 그대로 경기합니다. 결석 등으로 팀을 새로 짜야 하면 위 버튼을 누르세요.
+                </p>
+              ) : (
+                <>
+                  <p className="text-xs text-slate-500 mt-2.5 mb-3 leading-relaxed">
+                    <b className="text-orange-500">이 경기에서만</b> 적용됩니다. 팀 승점은 기본 소속팀에,
+                    개인 경기 수행 점수는 <b className="text-slate-300">여기서 뛴 팀</b>의 승패로 계산됩니다.
+                    누르지 않은 선수는 <b className="text-slate-300">결장</b>(개인 점수 미반영).
+                  </p>
+                  <div className="flex justify-between text-[11px] font-black px-1 mb-1.5">
+                    <span className="text-orange-500">A {gsRosterA.length}명</span>
+                    <span className="text-slate-600">결장 {allPlayers.length - gsRosterA.length - gsRosterB.length}명</span>
+                    <span className="text-blue-500">B {gsRosterB.length}명</span>
+                  </div>
+                  <div className="space-y-1 max-h-[320px] overflow-y-auto pr-1">
+                    {allPlayers.map(p => {
+                      const inA = gsRosterA.includes(p.id);
+                      const inB = gsRosterB.includes(p.id);
+                      return (
+                        <div key={p.id} className="flex items-center gap-2 bg-slate-900/30 border border-slate-800 rounded-xl px-2.5 py-1.5">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-bold text-slate-200 truncate">{p.number} {p.name}</div>
+                            <div className="text-[10px] text-slate-500 truncate">{p.teamName}</div>
+                          </div>
+                          <button
+                            onClick={() => assign(p.id, inA ? null : 'A')}
+                            className={cn("w-11 h-9 rounded-lg text-sm font-black transition-all",
+                              inA ? "bg-orange-600 text-white" : "bg-slate-800 text-slate-500 hover:bg-slate-700")}
+                          >A</button>
+                          <button
+                            onClick={() => assign(p.id, inB ? null : 'B')}
+                            className={cn("w-11 h-9 rounded-lg text-sm font-black transition-all",
+                              inB ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-500 hover:bg-slate-700")}
+                          >B</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </Card>
 
             <Card title="규칙 설정">
@@ -2281,10 +2526,19 @@ export default function App() {
     const teamB = game ? data.teams.find(t => t.id === game.teamBId) : undefined;
     const set = game?.sets[setId];
 
+    // 이 경기에 한해 팀을 섞은 경우(출결 등) rosterA/rosterB가 기본 소속팀보다 우선한다.
+    const allPlayers = data.teams.flatMap(t => t.players ?? []);
+    const sideRoster = (side: 'A' | 'B'): Player[] => {
+      const ids = side === 'A' ? game?.rosterA : game?.rosterB;
+      if (ids && ids.length) return ids.map(id => allPlayers.find(p => p.id === id)).filter(Boolean) as Player[];
+      return ((side === 'A' ? teamA : teamB)?.players ?? []);
+    };
+    const rosterA_ = sideRoster('A');
+    const rosterB_ = sideRoster('B');
+
     // 현재 로스터에 존재하는 선수 id 집합 — courtA/courtB에서 "유효한 선택"만 인정.
-    const rosterIds = (t?: typeof teamA) => new Set((t?.players ?? []).map(p => p.id));
-    const validA = rosterIds(teamA);
-    const validB = rosterIds(teamB);
+    const validA = new Set(rosterA_.map(p => p.id));
+    const validB = new Set(rosterB_.map(p => p.id));
 
     // ★ self-heal: courtA/courtB에 남은 "로스터에 없는" 선수 id(삭제·CSV 교체·세트 이월로
     //   생긴 stale id)를 제거해 저장한다. 이 stale id가 앞쪽에 쌓이면 length가 부풀고
@@ -2406,17 +2660,19 @@ export default function App() {
 
           <div className="grid grid-cols-2 gap-4">
             {[
-              { team: 'A' as const, data: teamA, key: 'courtA' as const, color: 'text-orange-500', bg: 'bg-orange-600' },
-              { team: 'B' as const, data: teamB, key: 'courtB' as const, color: 'text-blue-500', bg: 'bg-blue-600' }
+              { team: 'A' as const, data: teamA, roster: rosterA_, key: 'courtA' as const, color: 'text-orange-500', bg: 'bg-orange-600' },
+              { team: 'B' as const, data: teamB, roster: rosterB_, key: 'courtB' as const, color: 'text-blue-500', bg: 'bg-blue-600' }
             ].map(t => {
               const otherKey = t.key === 'courtA' ? 'courtB' : 'courtA';
-              const candidates = (t.data?.players ?? []).filter(player => {
+              const candidates = t.roster.filter(player => {
                 if (!game.intrasquad) return true;
                 if (intraAttend && !intraAttend.has(player.id)) return false;   // 출석 풀만
                 if (cleanCourt[otherKey].includes(player.id)) return false;      // 반대 사이드 제외(중복 방지)
                 return true;
               });
-              const sideLabel = game.intrasquad ? (t.team === 'A' ? 'A 사이드' : 'B 사이드') : t.data?.name;
+              const mixed = !!((game.rosterA?.length ?? 0) || (game.rosterB?.length ?? 0));
+              const sideLabel = game.intrasquad ? (t.team === 'A' ? 'A 사이드' : 'B 사이드')
+                : mixed ? `${t.data?.name ?? ''} (혼합)` : t.data?.name;
               return (
               <div key={t.team} className="flex flex-col space-y-2">
                 <div className="flex justify-between items-center px-1">
@@ -2429,7 +2685,7 @@ export default function App() {
                     const isSelected = idx !== -1;
                     // 같은 팀 코트에서 다른 선수가 이미 쓴 포지션은 제외(중복 방지). 내 현재 포지션은 유지.
                     const usedPositions = new Set(
-                      (t.data?.players ?? [])
+                      t.roster
                         .filter(pp => pp.id !== player.id && cleanCourt[t.key].includes(pp.id) && pp.position)
                         .map(pp => pp.position)
                     );
@@ -2513,6 +2769,7 @@ export default function App() {
     const sbTeamA = (game.intrasquad && teamA) ? { ...teamA, name: nameA } : teamA;
     const sbTeamB = (game.intrasquad && teamB) ? { ...teamB, name: nameB } : teamB;
 
+    const [serveOrderOpen, setServeOrderOpen] = useState(false);
     const { recordAction, undoLastScore, adjustStat, rotateServer, substitute } = useGameLogic({
       data,
       setData,
@@ -2769,10 +3026,7 @@ export default function App() {
                   <button onClick={undoLastScore} className="flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-xl bg-white border-2 border-orange-300 hover:bg-orange-50 text-orange-700 font-bold text-sm transition-colors whitespace-nowrap">
                     <RotateCcw size={15} /> 득점 취소
                   </button>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <button onClick={() => rotateServer(set.servingTeam, -1)} className="flex items-center justify-center gap-1 px-2 py-2 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors whitespace-nowrap"><ChevronLeft size={15} /> 이전</button>
-                    <button onClick={() => rotateServer(set.servingTeam, 1)} className="flex items-center justify-center gap-1 px-2 py-2 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors whitespace-nowrap">다음 <ChevronRight size={15} /></button>
-                  </div>
+                  <ServeOrderPanel set={set} teamA={teamA} teamB={teamB} onRotate={rotateServer} compact />
                   <div className="grid grid-cols-2 gap-1.5">
                     <button onClick={() => navigate('game-court', { setId })} className="flex items-center justify-center gap-1 px-2 py-2 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors whitespace-nowrap" title="코트 선수·서브 오더 다시 편성">
                       <Users size={15} /> 코트편성
@@ -2820,6 +3074,9 @@ export default function App() {
               <button onClick={() => rotateServer(set.servingTeam, 1)} title="다음(로테이션)" className="flex items-center justify-center w-11 h-11 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 transition-colors">
                 <ChevronRight size={22} />
               </button>
+              <button onClick={() => setServeOrderOpen(true)} title="서브 순서 맞추기(양 팀)" className="flex items-center justify-center px-2.5 h-11 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors whitespace-nowrap">
+                서브순서
+              </button>
               <div className="flex-1" />
               <button onClick={() => navigate('game-court', { setId })} title="코트 재편성 — 선수·서브 오더 다시 편성" className="flex items-center justify-center w-11 h-11 rounded-xl bg-white border-2 border-slate-300 hover:bg-slate-50 text-slate-500 transition-colors">
                 <Users size={18} />
@@ -2834,6 +3091,20 @@ export default function App() {
               )}
             </div>
           </footer>
+        )}
+
+        {serveOrderOpen && (
+          <ModalOverlay onClose={() => setServeOrderOpen(false)}>
+            <h3 className="text-lg font-black text-slate-100 mb-1">서브 순서 맞추기</h3>
+            <p className="text-xs text-slate-400 mb-3">
+              득점 입력 중 순서가 틀어졌을 때 팀별로 각각 맞춥니다. 표시된 이름이 <b>다음 서브할 선수</b>입니다.
+            </p>
+            <ServeOrderPanel set={set} teamA={teamA} teamB={teamB} onRotate={rotateServer} />
+            <button
+              onClick={() => setServeOrderOpen(false)}
+              className="mt-4 w-full py-3 rounded-xl bg-orange-600 text-white font-bold"
+            >닫기</button>
+          </ModalOverlay>
         )}
 
         {/* 경기 설정 모달은 App 레벨에서 렌더(리마운트로 인한 깜빡임 방지) */}
@@ -3318,24 +3589,32 @@ export default function App() {
           </Card>
 
           <Card title="라운드 수">
-            <div className="flex gap-2">
-              {[1, 2, 3, 4].map(r => (
-                <button
-                  key={r}
-                  onClick={() => setRounds(r)}
-                  className={cn(
-                    "flex-1 py-3.5 lg:py-3 rounded-xl text-base lg:text-sm font-bold transition-all",
-                    rounds === r ? "bg-orange-600 text-white" : "bg-slate-800 text-slate-400"
-                  )}
-                >
-                  {r}바퀴
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setRounds(r => Math.max(1, r - 1))}
+                className="w-14 h-14 lg:w-12 lg:h-12 rounded-xl bg-slate-800 text-slate-300 text-2xl font-bold active:bg-slate-700 flex-shrink-0"
+              >−</button>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={20}
+                value={rounds}
+                onChange={e => {
+                  const v = parseInt(e.target.value, 10);
+                  setRounds(Number.isFinite(v) ? Math.min(20, Math.max(1, v)) : 1);
+                }}
+                className="flex-1 min-w-0 h-14 lg:h-12 text-center bg-slate-800 rounded-xl text-slate-100 text-2xl lg:text-xl font-black outline-none focus:ring-2 focus:ring-orange-600"
+              />
+              <span className="text-slate-400 text-base lg:text-sm font-bold flex-shrink-0">바퀴</span>
+              <button
+                onClick={() => setRounds(r => Math.min(20, r + 1))}
+                className="w-14 h-14 lg:w-12 lg:h-12 rounded-xl bg-slate-800 text-slate-300 text-2xl font-bold active:bg-slate-700 flex-shrink-0"
+              >+</button>
             </div>
             <p className="text-sm lg:text-[10px] text-slate-500 mt-2 leading-relaxed">
-              풀리그: 모든 팀이 한 번씩 대결.<br/>
-              2바퀴 = 모든 팀과 두 번씩 (홈/어웨이 개념).<br/>
-              진행 중에도 라운드를 더 추가할 수 있습니다.
+              풀리그: 모든 팀이 한 번씩 대결. 2바퀴 = 모든 팀과 두 번씩.<br/>
+              1~20바퀴까지 직접 입력할 수 있고, 진행 중에도 라운드를 더 추가할 수 있습니다.
             </p>
           </Card>
 
