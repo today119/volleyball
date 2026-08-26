@@ -29,7 +29,7 @@ export interface Team {
  * sum of its outcomes; we don't store attempts separately.
  *
  *   serve total   = serveOk + serveAce + serveFail
- *   spike total   = spikeSuccess + spikeBlocked + spikeError
+ *   spike total   = spikeSuccess + spikeInPlay + spikeBlocked + spikeError
  *   set total     = setSuccess + setAssist + setError
  *
  * Score-affecting actions (which increment team score):
@@ -58,6 +58,7 @@ export interface PlayerStats {
   spikeSuccess: number;  // killed — our team +1
   spikeBlocked: number;  // opponent blocked — other team +1
   spikeError: number;    // out/net — other team +1
+  spikeInPlay?: number;  // 연결 — 상대가 받아내 랠리 지속(점수 변동 없음). 구버전 기록엔 없어 optional.
 
   // Block (success only — failed blocks aren't recorded)
   block: number;         // our team +1
@@ -77,7 +78,7 @@ export interface PlayerStats {
 
 export const EMPTY_STATS: PlayerStats = {
   serveOk: 0, serveAce: 0, serveFail: 0,
-  spikeSuccess: 0, spikeBlocked: 0, spikeError: 0,
+  spikeSuccess: 0, spikeBlocked: 0, spikeError: 0, spikeInPlay: 0,
   block: 0,
   receive: 0, dig: 0,
   setSuccess: 0, setAssist: 0, setError: 0,
@@ -248,6 +249,7 @@ export const ACTION_OUTCOMES: Record<ActionCategory, Array<{
   ],
   attack: [
     { key: 'spikeSuccess', label: '득점',     scoringTeam: 'self'  },
+    { key: 'spikeInPlay',  label: '연결',     scoringTeam: 'none'  },
     { key: 'spikeBlocked', label: '상대블록', scoringTeam: 'other' },
     { key: 'spikeError',   label: '실책',     scoringTeam: 'other' },
   ],

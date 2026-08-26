@@ -53,9 +53,17 @@ export interface DerivedRates {
   setEffective: number;   // (success + assist) / total × 100
 }
 
+/**
+ * 공격 시도 수 = 득점 + 연결 + 상대블록 + 실책.
+ * spikeInPlay(연결)는 나중에 추가된 항목이라 구버전 기록엔 없다 → 반드시 ?? 0.
+ */
+export function spikeAttempts(s: PlayerStats): number {
+  return (s.spikeSuccess ?? 0) + (s.spikeInPlay ?? 0) + (s.spikeBlocked ?? 0) + (s.spikeError ?? 0);
+}
+
 export function deriveRates(s: PlayerStats): DerivedRates {
   const serveTotal = s.serveOk + s.serveAce + s.serveFail;
-  const spikeTotal = s.spikeSuccess + s.spikeBlocked + s.spikeError;
+  const spikeTotal = spikeAttempts(s);
   const setTotal = s.setSuccess + s.setAssist + s.setError;
 
   return {

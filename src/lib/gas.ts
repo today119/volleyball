@@ -154,7 +154,8 @@ export async function gasExportEvaluations(
         // raw counts
         serveAttempts: stats.serveOk + stats.serveAce + stats.serveFail,
         serveSuccess: stats.serveOk + stats.serveAce,
-        spikeAttempts: stats.spikeSuccess + stats.spikeBlocked + stats.spikeError,
+        spikeAttempts: (stats.spikeSuccess ?? 0) + (stats.spikeInPlay ?? 0) + (stats.spikeBlocked ?? 0) + (stats.spikeError ?? 0),
+        spikeInPlay: stats.spikeInPlay ?? 0,
         spikeSuccess: stats.spikeSuccess,
         blocks: stats.block,
         receives: stats.receive,

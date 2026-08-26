@@ -55,6 +55,7 @@ import { readScoreEvents } from './lib/cloudOps';
 import { useAuth, signInWithGoogle, signOut } from './lib/auth';
 import {
   deriveRates,
+  spikeAttempts,
   aggregatePlayerStatsInGame,
   aggregatePlayerStatsAllGames,
   lookupCriteriaScore,
@@ -572,7 +573,7 @@ const BenchPanel = ({
     if (!s) return null;
     const serveTotal = s.serveOk + s.serveAce + s.serveFail;
     const serveOk = s.serveOk + s.serveAce;
-    const spikeTotal = s.spikeSuccess + s.spikeBlocked + s.spikeError;
+    const spikeTotal = spikeAttempts(s);
     return { serveOk, serveTotal, spikeSuccess: s.spikeSuccess, spikeTotal, block: s.block, error: s.error };
   };
 
@@ -674,18 +675,20 @@ const CourtStatsSummary = ({
     if (!s) return acc;
     acc.serveOk += s.serveOk; acc.serveAce += s.serveAce; acc.serveFail += s.serveFail;
     acc.spikeSuccess += s.spikeSuccess; acc.spikeBlocked += s.spikeBlocked; acc.spikeError += s.spikeError;
+    acc.spikeInPlay = (acc.spikeInPlay ?? 0) + (s.spikeInPlay ?? 0);
     acc.block += s.block; acc.receive += s.receive; acc.dig += s.dig;
     acc.setAssist += s.setAssist;
     acc.error += s.error;
     return acc;
   }, { 
     serveOk:0, serveAce:0, serveFail:0,
-    spikeSuccess:0, spikeBlocked:0, spikeError:0,
+    spikeSuccess:0, spikeBlocked:0, spikeError:0, spikeInPlay:0,
     block:0, receive:0, dig:0, setAssist:0, error:0 
   });
 
   const serveTotal = total.serveOk + total.serveAce + total.serveFail;
-  const spikeTotal = total.spikeSuccess + total.spikeBlocked + total.spikeError;
+  // 이 누적 객체는 PlayerStats 전체 필드를 갖지 않아 spikeAttempts() 대신 직접 합산.
+  const spikeTotal = total.spikeSuccess + total.spikeInPlay + total.spikeBlocked + total.spikeError;
   const accent = team === 'A' ? 'text-orange-400' : 'text-blue-400';
 
   return (
@@ -802,7 +805,7 @@ const CourtPlayers = ({
     if (!s) return { points: 0, errors: 0, attackPct: 0, servePct: 0, spikeTotal: 0, serveTotal: 0, hasAny: false };
     const points = s.spikeSuccess + s.serveAce + s.block;
     const errors = s.error + s.spikeError + s.spikeBlocked + s.serveFail;
-    const spikeTotal = s.spikeSuccess + s.spikeBlocked + s.spikeError;
+    const spikeTotal = spikeAttempts(s);
     const attackPct = spikeTotal > 0 ? Math.round((s.spikeSuccess / spikeTotal) * 100) : 0;
     const serveTotal = s.serveOk + s.serveAce + s.serveFail;
     const servePct = serveTotal > 0 ? Math.round(((s.serveOk + s.serveAce) / serveTotal) * 100) : 0;
@@ -1021,6 +1024,7 @@ const OutcomePicker = ({
           // 실책과 구분되도록 별도 색(주황)으로, 나머지 실점 결과는 빨강 계열.
           const colorClass =
             o.scoringTeam === 'self'    ? 'bg-emerald-500/10 border-emerald-400/40 text-emerald-300' :
+            o.key === 'spikeInPlay'     ? 'bg-slate-500/10 border-slate-400/40 text-slate-300' :
             o.key === 'spikeBlocked'    ? 'bg-orange-500/10 border-orange-400/40 text-orange-300' :
             o.scoringTeam === 'other'   ? 'bg-rose-500/10 border-rose-400/40 text-rose-300' :
             'bg-slate-500/10 border-slate-400/40 text-slate-300';
