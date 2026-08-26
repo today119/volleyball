@@ -267,3 +267,42 @@ export const ACTION_OUTCOMES: Record<ActionCategory, Array<{
     { key: 'error', label: '실책', scoringTeam: 'other' },
   ],
 };
+
+/**
+ * 평가 기준 기본값 — 2026학년도 2학기 「스포츠 경기 분석」 평가계획 기준.
+ * App/동기화 양쪽에서 써야 해서 여기(공용 타입 모듈)에 둔다.
+ */
+export const DEFAULT_CRITERIA: EvaluationCriteria = {
+  // 개인 기록 40점 — 서브 평균 = (득점×3 + 성공×2) / 서브 횟수
+  serve: [
+    { min: 1.8, score: 40 }, { min: 1.4, score: 35 }, { min: 1.0, score: 30 },
+    { min: 0.7, score: 25 }, { min: 0, score: 20 },
+  ],
+  // 경기 수행 30점 — 승점 평균 = 이긴 세트 수 / 본인이 뛴 경기 수
+  league: [
+    { min: 1.8, score: 30 }, { min: 1.4, score: 25 }, { min: 1.0, score: 20 },
+    { min: 0.7, score: 15 }, { min: 0, score: 10 },
+  ],
+  // 경기 분석 및 피드백 30점 — 기록지 5항목 중 충족 개수
+  gameRecord: [
+    { min: 4, score: 30 }, { min: 3, score: 25 }, { min: 2, score: 20 },
+    { min: 1, score: 15 }, { min: 0, score: 10 },
+  ],
+};
+
+/**
+ * 저장된 criteria에 빠진 항목을 기본값으로 채운다.
+ * 구버전 데이터에는 gameRecord가 없어서, 이걸 거치지 않으면
+ * lookupCriteriaScore(…, undefined)에서 앱이 죽는다.
+ */
+export function normalizeCriteria(c: any): EvaluationCriteria {
+  const pick = (v: any, def: { min: number; score: number }[]) =>
+    Array.isArray(v) && v.length ? v : def;
+  const src = c && typeof c === 'object' ? c : {};
+  return {
+    serve: pick(src.serve, DEFAULT_CRITERIA.serve),
+    league: pick(src.league, DEFAULT_CRITERIA.league),
+    gameRecord: pick(src.gameRecord, DEFAULT_CRITERIA.gameRecord),
+    ...(src.performance ? { performance: src.performance } : {}),
+  };
+}

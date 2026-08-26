@@ -1,3 +1,4 @@
+import { normalizeCriteria } from '../types';
 /**
  * Firebase Realtime Database sync hook.
  *
@@ -72,7 +73,9 @@ function normalizeData(raw: any): AppData {
       teamIds: toArr(e.teamIds),
       matches: toArr(e.matches),
     })),
-    criteria: raw.criteria ?? {},
+    criteria: normalizeCriteria(raw.criteria),
+    // recordSheets를 빠뜨리면 동기화될 때마다 기록지 체크가 통째로 사라진다.
+    recordSheets: raw.recordSheets ?? {},
     gasUrl: raw.gasUrl ?? '',
     peerEvals: raw.peerEvals ?? {},
   };

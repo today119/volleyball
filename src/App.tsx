@@ -35,6 +35,9 @@ import { format } from 'date-fns';
 import { cn } from './lib/utils';
 import { 
   AppData, 
+  DEFAULT_CRITERIA,
+  normalizeCriteria,
+
   Team, 
   Game, 
   Player, 
@@ -95,32 +98,6 @@ const RECORD_ITEM_LABELS = [
 
 // 2026학년도 2학기 「스포츠 경기 분석」 평가계획 기준
 //   경기 수행 30 (승점 평균) + 개인 기록 40 (서브 평균) + 경기 분석 및 피드백 30 = 100
-const DEFAULT_CRITERIA: EvaluationCriteria = {
-  // 개인 기록 40점 — 서브 평균 = (득점×3 + 성공×2) / 서브 횟수
-  serve: [
-    { min: 1.8, score: 40 },
-    { min: 1.4, score: 35 },
-    { min: 1.0, score: 30 },
-    { min: 0.7, score: 25 },
-    { min: 0,   score: 20 },
-  ],
-  // 경기 수행 30점 — 승점 평균 = 이긴 세트 수 / 본인이 뛴 경기 수
-  league: [
-    { min: 1.8, score: 30 },
-    { min: 1.4, score: 25 },
-    { min: 1.0, score: 20 },
-    { min: 0.7, score: 15 },
-    { min: 0,   score: 10 },
-  ],
-  // 경기 분석 및 피드백 30점 — 기록지 5항목 중 충족 개수
-  gameRecord: [
-    { min: 4, score: 30 },
-    { min: 3, score: 25 },
-    { min: 2, score: 20 },
-    { min: 1, score: 15 },
-    { min: 0, score: 10 },
-  ],
-};
 
 const INITIAL_DATA: AppData = {
   teams: [
@@ -1392,7 +1369,8 @@ export default function App() {
               players: toArr(t.players),
             }))
           : INITIAL_DATA.teams,
-        criteria: parsed.criteria ?? INITIAL_DATA.criteria,
+        // 구버전 저장본에는 gameRecord 기준이 없어 그대로 쓰면 팀 화면에서 앱이 죽는다.
+        criteria: normalizeCriteria(parsed.criteria),
         peerEvals: parsed.peerEvals ?? {},
       };
     } catch {
@@ -2210,7 +2188,7 @@ export default function App() {
                   const items = sheet?.items ?? [false, false, false, false, false];
                   const notSub = !!sheet?.notSubmitted;
                   const n = notSub ? 0 : items.filter(Boolean).length;
-                  const score = notSub ? 0 : lookupCriteriaScore(n, data.criteria.gameRecord);
+                  const score = notSub ? 0 : lookupCriteriaScore(n, data.criteria?.gameRecord ?? DEFAULT_CRITERIA.gameRecord);
                   return (
                     <div key={player.id} className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2">
                       <div className="w-24 lg:w-28 shrink-0 min-w-0">

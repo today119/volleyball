@@ -85,6 +85,8 @@ export function lookupCriteriaScore(
   metric: number, 
   thresholds: { min: number; score: number }[]
 ): number {
+  // 구버전 저장 데이터에는 없는 기준이 있어 undefined로 들어올 수 있다 → 방어.
+  if (!Array.isArray(thresholds) || thresholds.length === 0) return 0;
   // Thresholds are typically sorted high-to-low; find first whose min ≤ metric
   const sorted = [...thresholds].sort((a, b) => b.min - a.min);
   for (const t of sorted) {
@@ -224,15 +226,15 @@ export function calculatePlayerEvaluation(
   const rates = deriveRates(allStats);
 
   // ── 개인 기록 40점 : 서브 평균 = (득점×3 + 성공×2) / 서브 횟수
-  const serveScore = lookupCriteriaScore(rates.serveMetric, data.criteria.serve);
+  const serveScore = lookupCriteriaScore(rates.serveMetric, data.criteria?.serve);
 
   // ── 경기 수행 30점 : 승점(이긴 세트 수) ÷ 본인이 뛴 경기 수
   const standing = playerLeagueStanding(data.games, player.id, player.teamId);
-  const leagueScore = lookupCriteriaScore(standing.pointsAvg, data.criteria.league);
+  const leagueScore = lookupCriteriaScore(standing.pointsAvg, data.criteria?.league);
 
   // ── 경기 분석 및 피드백 30점 : 기록지 5항목
   const sheet = data.recordSheets?.[player.id];
-  const recordScore = recordSheetScore(sheet, data.criteria.gameRecord);
+  const recordScore = recordSheetScore(sheet, data.criteria?.gameRecord);
   const recordItems = sheet && !sheet.notSubmitted ? sheet.items.filter(Boolean).length : 0;
 
   return {
