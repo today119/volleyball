@@ -1485,6 +1485,26 @@ export default function App() {
     setParams(p);
   };
 
+  // ── 뷰 리마운트 방지 ──────────────────────────────────────────────
+  // 아래 뷰들은 App() 안에서 정의된다. 그래서 App이 리렌더될 때마다(특히 협업
+  // 동기화 setData) "새 컴포넌트 타입"이 만들어져 React가 화면을 통째로
+  // 언마운트→마운트한다. 그 결과가 ① 화면 깜빡임 ② 스크롤이 맨 위로 튐
+  // ③ 뷰 안의 useState 초기화(출석 체크·탭·모달이 되돌아감) 였다.
+  //   (그동안은 state를 하나씩 App 레벨로 끌어올려 개별 증상만 막아 왔다.)
+  // stableView는 "컴포넌트 타입은 고정, 알맹이는 항상 최신 클로저"로 감싸서
+  // 리마운트 자체를 없앤다. view가 실제로 바뀔 때만 정상적으로 교체된다.
+  const viewFnsRef = useRef<Record<string, () => any>>({});
+  const stableViewsRef = useRef<Record<string, React.FC>>({});
+  const stableView = (name: string, fn: () => any): React.FC => {
+    viewFnsRef.current[name] = fn;
+    if (!stableViewsRef.current[name]) {
+      const C: React.FC = () => viewFnsRef.current[name]();
+      C.displayName = name;
+      stableViewsRef.current[name] = C;
+    }
+    return stableViewsRef.current[name];
+  };
+
   // --- View Components ---
 
   const HomeView = () => (
@@ -4071,16 +4091,16 @@ export default function App() {
           transition={{ duration: 0.2 }}
           className="h-full w-full"
         >
-          {view === 'home' && <HomeView />}
-          {view === 'team' && <TeamView />}
-          {view === 'game-setup' && <GameSetupView />}
-          {view === 'game-court' && <CourtSetupView />}
-          {view === 'game-record' && <GameRecordView />}
-          {view === 'dashboard' && <DashboardView />}
-          {view === 'event-setup' && <EventSetupView />}
-          {view === 'intrasquad-setup' && <IntrasquadSetupView />}
-          {view === 'event-detail' && <EventDetailView />}
-          {view === 'settings' && <SettingsView />}
+          {view === 'home' && React.createElement(stableView('home', HomeView))}
+          {view === 'team' && React.createElement(stableView('team', TeamView))}
+          {view === 'game-setup' && React.createElement(stableView('game-setup', GameSetupView))}
+          {view === 'game-court' && React.createElement(stableView('game-court', CourtSetupView))}
+          {view === 'game-record' && React.createElement(stableView('game-record', GameRecordView))}
+          {view === 'dashboard' && React.createElement(stableView('dashboard', DashboardView))}
+          {view === 'event-setup' && React.createElement(stableView('event-setup', EventSetupView))}
+          {view === 'intrasquad-setup' && React.createElement(stableView('intrasquad-setup', IntrasquadSetupView))}
+          {view === 'event-detail' && React.createElement(stableView('event-detail', EventDetailView))}
+          {view === 'settings' && React.createElement(stableView('settings', SettingsView))}
         </motion.div>
       </AnimatePresence>
 
