@@ -50,6 +50,7 @@ import {
   EMPTY_STATS,
 } from './types';
 import { useFirebaseSync } from './lib/useFirebaseSync';
+import { database } from './lib/firebase';
 import { useGameLogic } from './lib/useGameLogic';
 import { readScoreEvents } from './lib/cloudOps';
 import { useAuth, signInWithGoogle, signOut } from './lib/auth';
@@ -1391,6 +1392,20 @@ export default function App() {
     enabled: firebaseEnabled,
   });
 
+  // 경기 삭제: 동기화 훅은 "게임 수가 줄어드는 전체쓰기"를 막으므로(데이터 보호),
+  // 로컬만 지우면 클라우드에 남아 새로고침 때 되살아난다 → games 노드에서 직접 지운다.
+  const deleteGame = (gameId: string) => {
+    setData(prev => ({ ...prev, games: prev.games.filter(g => g.id !== gameId) }));
+    if (!firebaseEnabled || readOnly || !session.sessionId) return;
+    const base = database.ref(`spikelog/${session.sessionId}`);
+    base.child('games').transaction((cur: any) => {
+      if (!cur) return cur;
+      const arr = Array.isArray(cur) ? cur : Object.values(cur);
+      return arr.filter((g: any) => g && g.id !== gameId);
+    }).then(() => base.child('lastUpdate').set(Date.now()))
+      .catch(err => { console.error('[deleteGame] failed:', err); showToast('삭제 실패 — 다시 시도하세요'); });
+  };
+
   const [view, setView] = useState<'home' | 'team' | 'game-setup' | 'game-court' | 'game-record' | 'dashboard' | 'settings' | 'event-setup' | 'event-detail' | 'intrasquad-setup'>('home');
   const [params, setParams] = useState<any>({});
   const [currentGameId, setCurrentGameId] = useState<string | null>(null);
@@ -1766,10 +1781,7 @@ export default function App() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (!confirm('이 경기를 삭제하시겠습니까?')) return;
-                                setData(prev => ({
-                                  ...prev,
-                                  games: prev.games.filter(g => g.id !== game.id),
-                                }));
+                                deleteGame(game.id);
                                 showToast('경기 삭제됨');
                               }}
                               className="text-slate-600 hover:text-red-500 p-1 shrink-0"
@@ -1818,10 +1830,7 @@ export default function App() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (!confirm('이 경기 기록을 삭제하시겠습니까?')) return;
-                                setData(prev => ({
-                                  ...prev,
-                                  games: prev.games.filter(g => g.id !== game.id),
-                                }));
+                                deleteGame(game.id);
                                 showToast('경기 삭제됨');
                               }}
                               className="text-slate-600 hover:text-red-500 p-1 shrink-0"
