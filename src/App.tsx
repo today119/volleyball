@@ -3304,7 +3304,11 @@ export default function App() {
   };
 
   const IntrasquadSetupView = () => {
-    const [teamId, setTeamId] = useState<string>(() => data.teams[0]?.id ?? '');
+    // 기본 팀 = 가장 최근 자체리그 경기를 한 팀 (첫 팀 고정이면 다른 팀 기록이 '없는 것처럼' 보임).
+    const [teamId, setTeamId] = useState<string>(() => {
+      const last = [...data.games].reverse().find(g => g?.intrasquad && data.teams.some(t => t.id === g.teamAId) && (g.sets?.[0]?.scoreEvents?.length ?? 0) > 0);
+      return last?.teamAId ?? data.teams[0]?.id ?? '';
+    });
     const team = data.teams.find(t => t.id === teamId);
     const roster = team?.players ?? [];
     const [attend, setAttend] = useState<Set<string>>(() => new Set(roster.map(p => p.id)));
