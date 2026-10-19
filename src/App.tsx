@@ -1394,14 +1394,16 @@ export default function App() {
 
   // 경기 삭제: 동기화 훅은 "게임 수가 줄어드는 전체쓰기"를 막으므로(데이터 보호),
   // 로컬만 지우면 클라우드에 남아 새로고침 때 되살아난다 → games 노드에서 직접 지운다.
-  const deleteGame = (gameId: string) => {
-    setData(prev => ({ ...prev, games: prev.games.filter(g => g.id !== gameId) }));
+  const deleteGame = (gameId: string) => deleteGames([gameId]);
+  const deleteGames = (ids: string[]) => {
+    const del = new Set(ids);
+    setData(prev => ({ ...prev, games: prev.games.filter(g => !del.has(g.id)) }));
     if (!firebaseEnabled || readOnly || !session.sessionId) return;
     const base = database.ref(`spikelog/${session.sessionId}`);
     base.child('games').transaction((cur: any) => {
       if (!cur) return cur;
       const arr = Array.isArray(cur) ? cur : Object.values(cur);
-      return arr.filter((g: any) => g && g.id !== gameId);
+      return arr.filter((g: any) => g && !del.has(g.id));
     }).then(() => base.child('lastUpdate').set(Date.now()))
       .catch(err => { console.error('[deleteGame] failed:', err); showToast('삭제 실패 — 다시 시도하세요'); });
   };
@@ -1751,6 +1753,24 @@ export default function App() {
                 <section className="space-y-4">
                   <h2 className="text-base lg:text-sm font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
                     <Play size={16} /> 진행 중인 경기 ({ongoing.length})
+                    {!readOnly && (() => {
+                      // 빈 경기 = 점수·득점 기록이 전혀 없음 + 대회 일정에 연결 안 됨.
+                      const linked = new Set(data.events.flatMap(e => (e.matches ?? []).map(m => m.gameId).filter(Boolean)));
+                      const empty = ongoing.filter(g => !linked.has(g.id) && (g.sets ?? []).every(s => !s.scoreA && !s.scoreB && !(s.scoreEvents?.length)));
+                      if (empty.length === 0) return null;
+                      return (
+                        <button
+                          onClick={() => {
+                            if (!confirm(`점수 기록이 없는 0:0 경기 ${empty.length}개를 지울까요?\n(점수가 하나라도 있는 경기는 남습니다)`)) return;
+                            deleteGames(empty.map(g => g.id));
+                            showToast(`빈 경기 ${empty.length}개 정리됨`);
+                          }}
+                          className="ml-auto normal-case tracking-normal text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-700 text-slate-400 hover:text-red-500 hover:border-red-500"
+                        >
+                          빈 경기 {empty.length}개 정리
+                        </button>
+                      );
+                    })()}
                   </h2>
                   <div className="space-y-3">
                     {[...ongoing].reverse().map(game => {
